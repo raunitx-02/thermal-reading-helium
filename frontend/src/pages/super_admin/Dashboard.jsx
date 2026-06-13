@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import api from '../../api';
-import { Users, MapPin, Plus, CheckCircle, Search, RefreshCw, Edit, Bell, LogOut } from 'lucide-react';
+import { Users, MapPin, Plus, Search, RefreshCw, Edit, Bell, LogOut, ChevronRight, X } from 'lucide-react';
 
 const RAILWAY_ZONES = [
   'Central Railway (CR) - Mumbai',
@@ -32,7 +32,7 @@ export default function SuperAdminDashboard() {
   const [branchAdmins, setBranchAdmins] = useState([]);
   const [states, setStates] = useState([]);
   const [districts, setDistricts] = useState([]);
-  const [summary, setSummary] = useState({ totalAdmins: 0, totalCities: 728, citiesLeft: 728 });
+  const [summary, setSummary] = useState({ totalAdmins: 0, totalCities: 728 });
   const [loading, setLoading] = useState(true);
 
   // Form states
@@ -51,6 +51,10 @@ export default function SuperAdminDashboard() {
   // Notification states
   const [notifications, setNotifications] = useState([]);
   const [showNotif, setShowNotif] = useState(false);
+
+  // Stats Modal states
+  const [showStatsModal, setShowStatsModal] = useState(false);
+  const [expandedState, setExpandedState] = useState(null);
 
   const fetchStates = async () => {
     try {
@@ -85,8 +89,7 @@ export default function SuperAdminDashboard() {
         const appointed = userRes.data.data.length;
         setSummary({
           totalAdmins: appointed,
-          totalCities: total,
-          citiesLeft: Math.max(0, total - appointed)
+          totalCities: total
         });
       }
     } catch (_) {}
@@ -210,8 +213,54 @@ export default function SuperAdminDashboard() {
     admin.zone?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // Group branch admins state-wise and district-wise
+  const getStatsData = () => {
+    const data = {};
+    branchAdmins.forEach(admin => {
+      const state = admin.state || 'Other State';
+      const city = admin.city || 'Other District';
+      if (!data[state]) {
+        data[state] = { total: 0, districts: {} };
+      }
+      data[state].total += 1;
+      data[state].districts[city] = (data[state].districts[city] || 0) + 1;
+    });
+
+    return Object.entries(data).map(([stateName, info]) => ({
+      state: stateName,
+      total: info.total,
+      districts: Object.entries(info.districts).map(([distName, count]) => ({
+        name: distName,
+        count
+      }))
+    })).sort((a, b) => b.total - a.total);
+  };
+
+  const stateStats = getStatsData();
+
   return (
     <div className="p-6 md:p-8 space-y-8 max-w-7xl">
+      {/* Dynamic styles for iOS bouncy transitions */}
+      <style>{`
+        @keyframes iosSpring {
+          0% { transform: scale(0.92) translateY(20px); opacity: 0; }
+          100% { transform: scale(1) translateY(0); opacity: 1; }
+        }
+        .animate-ios-spring {
+          animation: iosSpring 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: #cbd5e1;
+          border-radius: 10px;
+        }
+      `}</style>
+
       {/* Title & Actions */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 pb-4">
         <div>
@@ -234,12 +283,12 @@ export default function SuperAdminDashboard() {
                 setShowNotif(!showNotif);
                 if (!showNotif) handleMarkRead();
               }}
-              className={`p-2.5 border border-slate-200 text-slate-500 hover:text-slate-900 hover:bg-slate-50 rounded-lg transition relative shadow-sm ${showNotif ? 'bg-slate-100' : 'bg-white'}`}
+              className={`p-2.5 border border-slate-200 text-slate-550 text-slate-505 hover:text-slate-900 hover:bg-slate-50 rounded-lg transition relative shadow-sm ${showNotif ? 'bg-slate-100' : 'bg-white'}`}
               title="Notifications"
             >
               <Bell className="w-4 h-4" />
               {unreadCount > 0 && (
-                <span className="absolute top-1 right-1 w-2 h-2 bg-red-650 bg-red-600 rounded-full" />
+                <span className="absolute top-1 right-1 w-2 h-2 bg-red-600 rounded-full" />
               )}
             </button>
 
@@ -280,11 +329,18 @@ export default function SuperAdminDashboard() {
       </div>
 
       {/* KPI Section */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-        <div className="p-5 bg-white border border-slate-200 rounded-xl shadow-sm flex flex-col justify-between min-h-[120px] transition-all hover:shadow-md">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-4xl">
+        {/* Clickable Branch Admins Appointed */}
+        <div 
+          onClick={() => setShowStatsModal(true)}
+          className="p-5 bg-white border border-slate-200 rounded-xl shadow-sm flex flex-col justify-between min-h-[120px] transition-all hover:shadow-md cursor-pointer group active:scale-[0.98]"
+        >
           <div className="flex items-start justify-between gap-3">
-            <span className="text-[10px] md:text-xs text-slate-500 font-bold uppercase tracking-wider block">Branch Admins Appointed</span>
-            <div className="flex items-center justify-center w-10 h-10 rounded-lg border shrink-0 bg-blue-50 text-blue-600 border-blue-100">
+            <div>
+              <span className="text-[10px] md:text-xs text-slate-500 font-bold uppercase tracking-wider block">Branch Admins Appointed</span>
+              <span className="text-[9px] text-blue-500 font-bold opacity-0 group-hover:opacity-100 transition-opacity mt-0.5 block">View Distribution &rarr;</span>
+            </div>
+            <div className="flex items-center justify-center w-10 h-10 rounded-lg border shrink-0 bg-blue-50 text-blue-600 border-blue-100 group-hover:scale-110 transition-transform">
               <Users className="w-5 h-5" />
             </div>
           </div>
@@ -302,18 +358,6 @@ export default function SuperAdminDashboard() {
           </div>
           <div className="mt-3">
             <h3 className="text-2xl md:text-3xl font-black text-slate-900 leading-none">{summary.totalCities}</h3>
-          </div>
-        </div>
-
-        <div className="p-5 bg-white border border-slate-200 rounded-xl shadow-sm flex flex-col justify-between min-h-[120px] transition-all hover:shadow-md">
-          <div className="flex items-start justify-between gap-3">
-            <span className="text-[10px] md:text-xs text-slate-500 font-bold uppercase tracking-wider block">Appointment Capacity Left</span>
-            <div className="flex items-center justify-center w-10 h-10 rounded-lg border shrink-0 bg-amber-50 text-amber-600 border-amber-100">
-              <CheckCircle className="w-5 h-5" />
-            </div>
-          </div>
-          <div className="mt-3">
-            <h3 className="text-2xl md:text-3xl font-black text-slate-900 leading-none">{summary.citiesLeft}</h3>
           </div>
         </div>
       </div>
@@ -516,6 +560,87 @@ export default function SuperAdminDashboard() {
           </div>
         </div>
       )}
+
+      {/* iOS-Style Bouncy Stats Modal */}
+      {showStatsModal && (
+        <div className="fixed inset-0 bg-slate-950/40 backdrop-blur-md flex items-center justify-center p-4 z-50 transition-opacity duration-300">
+          <div className="bg-white border border-slate-100 rounded-3xl w-full max-w-lg shadow-2xl p-6 relative overflow-hidden transition-all transform scale-100 animate-ios-spring flex flex-col max-h-[85vh]">
+            
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-slate-100 pb-4 shrink-0">
+              <div>
+                <h2 className="text-xl font-bold text-slate-900 tracking-tight">Depo Administrators</h2>
+                <p className="text-xs text-slate-400 mt-0.5">State & district-wise distribution of active admins</p>
+              </div>
+              <button 
+                onClick={() => { setShowStatsModal(false); setExpandedState(null); }} 
+                className="p-1.5 hover:bg-slate-100 rounded-full transition text-slate-400 hover:text-slate-900"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body (Scrollable List) */}
+            <div className="flex-1 overflow-y-auto pr-1 mt-4 custom-scrollbar space-y-2">
+              {stateStats.length === 0 ? (
+                <div className="text-center py-12 text-slate-400 text-xs">
+                  No branch admins assigned to any state yet.
+                </div>
+              ) : (
+                stateStats.map((item) => (
+                  <div key={item.state} className="bg-slate-50/50 hover:bg-slate-50 rounded-2xl border border-slate-100 overflow-hidden transition-all duration-300">
+                    <button
+                      onClick={() => setExpandedState(expandedState === item.state ? null : item.state)}
+                      className="w-full flex items-center justify-between py-4 px-4 transition text-left"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-2.5 h-2.5 rounded-full bg-blue-600 shadow-sm shadow-blue-200" />
+                        <span className="font-extrabold text-slate-800 text-sm tracking-tight">{item.state}</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="bg-blue-50 text-blue-600 font-black text-[10px] px-2.5 py-1 rounded-full uppercase tracking-wider">
+                          {item.total} Admin{item.total > 1 ? 's' : ''}
+                        </span>
+                        <ChevronRight className={`w-4 h-4 text-slate-400 transition-transform duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] ${expandedState === item.state ? 'rotate-90 text-blue-600' : ''}`} />
+                      </div>
+                    </button>
+
+                    {/* Collapsible content (Accordion) */}
+                    <div 
+                      className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                        expandedState === item.state ? 'max-h-[300px] opacity-100 border-t border-slate-100/50 bg-white/70 px-4 py-3' : 'max-h-0 opacity-0 pointer-events-none'
+                      }`}
+                    >
+                      <div className="space-y-2 pl-4 border-l-2 border-blue-100">
+                        {item.districts.map(d => (
+                          <div key={d.name} className="flex justify-between items-center py-1 text-xs hover:translate-x-1 transition-transform duration-200">
+                            <span className="text-slate-600 font-semibold">{d.name}</span>
+                            <span className="text-slate-500 font-bold bg-slate-100 px-2 py-0.5 rounded-md text-[10px]">
+                              {d.count} Admin{d.count > 1 ? 's' : ''}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="border-t border-slate-100 pt-4 mt-4 text-center shrink-0">
+              <button 
+                onClick={() => { setShowStatsModal(false); setExpandedState(null); }}
+                className="w-full py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-colors"
+              >
+                Close List
+              </button>
+            </div>
+            
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
