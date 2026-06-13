@@ -211,37 +211,33 @@ export default function Sidebar() {
 
   return (
     <>
-      {/* Mobile Top Navbar - Rendered strictly if window width < 768px */}
-      {isMobile && (
-        <div className="flex md:hidden items-center justify-between bg-white border-b border-slate-200 px-6 py-4 text-slate-900 w-full z-40">
-          <button onClick={() => setMobileOpen(true)} className="text-slate-500 hover:text-slate-900">
-            <Menu className="w-6 h-6" />
-          </button>
-          <span className="font-bold text-sm flex items-center gap-1.5">
-            <img src="/ir-logo.png" className="w-5 h-5 object-contain" alt="IR logo" />
-            Indian Railways
-          </span>
-          {user?.role !== 'super_admin' ? (
-            <div className="relative">
-              <button onClick={() => { setShowNotif(!showNotif); handleMarkRead(); }} className="relative text-slate-500 hover:text-slate-900">
-                <Bell className="w-5 h-5" />
-                {unreadCount > 0 && (
-                  <span className="absolute top-0 right-0 w-2 h-2 bg-red-600 rounded-full" />
-                )}
-              </button>
-            </div>
-          ) : (
-            <div className="w-5" />
-          )}
-        </div>
-      )}
+      {/* Mobile Top Navbar - Rendered strictly on mobile viewports */}
+      <div className="md:hidden flex items-center justify-between bg-white border-b border-slate-200 px-6 py-4 text-slate-900 w-full z-45 shrink-0">
+        <button onClick={() => setMobileOpen(true)} className="text-slate-500 hover:text-slate-900">
+          <Menu className="w-6 h-6" />
+        </button>
+        <span className="font-bold text-sm flex items-center gap-1.5">
+          <img src="/ir-logo.png" className="w-5 h-5 object-contain" alt="IR logo" />
+          Indian Railways
+        </span>
+        {user?.role !== 'super_admin' ? (
+          <div className="relative">
+            <button onClick={() => { setShowNotif(!showNotif); handleMarkRead(); }} className="relative text-slate-500 hover:text-slate-900">
+              <Bell className="w-5 h-5" />
+              {unreadCount > 0 && (
+                <span className="absolute top-0 right-0 w-2 h-2 bg-red-600 rounded-full" />
+              )}
+            </button>
+          </div>
+        ) : (
+          <div className="w-5" />
+        )}
+      </div>
 
-      {/* Desktop Sidebar wrapper - Rendered strictly if window width >= 768px */}
-      {!isMobile && (
-        <aside className="hidden md:block w-64 h-screen shrink-0 sticky top-0 overflow-y-auto z-40">
-          <SidebarContent />
-        </aside>
-      )}
+      {/* Desktop Sidebar wrapper - Rendered strictly on desktop viewports */}
+      <aside className="hidden md:block w-64 h-screen shrink-0 sticky top-0 overflow-y-auto z-40">
+        <SidebarContent />
+      </aside>
 
       {/* Mobile Sidebar overlay */}
       {isMobile && mobileOpen && (
