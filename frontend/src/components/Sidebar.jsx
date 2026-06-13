@@ -172,31 +172,33 @@ export default function Sidebar() {
           </div>
 
           {/* Action buttons row */}
-          <div className="flex items-center justify-between border-t border-slate-200/60 pt-3">
-            <span className="text-[10px] text-slate-400 font-semibold">Active Session</span>
-            <div className="flex items-center gap-1.5 shrink-0">
-              <button
-                onClick={() => {
-                  setShowNotif(!showNotif);
-                  if (!showNotif) handleMarkRead();
-                }}
-                className={`p-2 border border-slate-200 text-slate-550 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition relative shadow-sm ${showNotif ? 'bg-slate-100' : 'bg-white'}`}
-                title="Notifications"
-              >
-                <Bell className="w-4 h-4" />
-                {unreadCount > 0 && (
-                  <span className="absolute top-1 right-1 w-1.5 h-1.5 bg-red-600 rounded-full" />
-                )}
-              </button>
-              <button
-                onClick={handleLogout}
-                className="p-2 hover:bg-slate-100 text-slate-500 hover:text-red-605 hover:text-red-600 rounded-lg border border-slate-200 transition bg-white shadow-sm"
-                title="Log Out"
-              >
-                <LogOut className="w-4 h-4" />
-              </button>
+          {user?.role !== 'super_admin' && (
+            <div className="flex items-center justify-between border-t border-slate-200/60 pt-3">
+              <span className="text-[10px] text-slate-400 font-semibold">Active Session</span>
+              <div className="flex items-center gap-1.5 shrink-0">
+                <button
+                  onClick={() => {
+                    setShowNotif(!showNotif);
+                    if (!showNotif) handleMarkRead();
+                  }}
+                  className={`p-2 border border-slate-200 text-slate-550 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition relative shadow-sm ${showNotif ? 'bg-slate-100' : 'bg-white'}`}
+                  title="Notifications"
+                >
+                  <Bell className="w-4 h-4" />
+                  {unreadCount > 0 && (
+                    <span className="absolute top-1 right-1 w-1.5 h-1.5 bg-red-600 rounded-full" />
+                  )}
+                </button>
+                <button
+                  onClick={handleLogout}
+                  className="p-2 hover:bg-slate-100 text-slate-500 hover:text-red-605 hover:text-red-600 rounded-lg border border-slate-200 transition bg-white shadow-sm"
+                  title="Log Out"
+                >
+                  <LogOut className="w-4 h-4" />
+                </button>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>
@@ -213,14 +215,18 @@ export default function Sidebar() {
           <img src="/ir-logo.png" className="w-5 h-5 object-contain" alt="IR logo" />
           Indian Railways
         </span>
-        <div className="relative">
-          <button onClick={() => { setShowNotif(!showNotif); handleMarkRead(); }} className="relative text-slate-500 hover:text-slate-900">
-            <Bell className="w-5 h-5" />
-            {unreadCount > 0 && (
-              <span className="absolute top-0 right-0 w-2 h-2 bg-red-650 bg-red-600 rounded-full" />
-            )}
-          </button>
-        </div>
+        {user?.role !== 'super_admin' ? (
+          <div className="relative">
+            <button onClick={() => { setShowNotif(!showNotif); handleMarkRead(); }} className="relative text-slate-500 hover:text-slate-900">
+              <Bell className="w-5 h-5" />
+              {unreadCount > 0 && (
+                <span className="absolute top-0 right-0 w-2 h-2 bg-red-655 bg-red-600 rounded-full" />
+              )}
+            </button>
+          </div>
+        ) : (
+          <div className="w-5" /> // Empty placeholder to balance flex row
+        )}
       </div>
 
       {/* Desktop Sidebar wrapper */}
