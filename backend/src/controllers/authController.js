@@ -32,7 +32,7 @@ exports.login = async (req, res, next) => {
       data: {
         accessToken,
         refreshToken,
-        user: { id: user.id, name: user.name, email: user.email, role: user.role, division: user.division, state: user.state, city: user.city, parent_id: user.parent_id, phone: user.phone, employee_id: user.employee_id }
+        user: { id: user.id, name: user.name, email: user.email, role: user.role, division: user.division, state: user.state, city: user.city, parent_id: user.parent_id, phone: user.phone, employee_id: user.employee_id, zone: user.zone }
       }
     });
   } catch (err) { next(err); }

@@ -1,6 +1,27 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../api';
-import { Users, MapPin, Plus, CheckCircle, Search, RefreshCw, Edit, ShieldAlert } from 'lucide-react';
+import { Users, MapPin, Plus, CheckCircle, Search, RefreshCw, Edit } from 'lucide-react';
+
+const RAILWAY_ZONES = [
+  'Central Railway (CR) - Mumbai',
+  'East Central Railway (ECR) - Hajipur',
+  'East Coast Railway (ECoR) - Bhubaneswar',
+  'Eastern Railway (ER) - Kolkata',
+  'North Central Railway (NCR) - Prayagraj',
+  'North Eastern Railway (NER) - Gorakhpur',
+  'Northeast Frontier Railway (NFR) - Maligaon, Guwahati',
+  'Northern Railway (NR) - New Delhi',
+  'North Western Railway (NWR) - Jaipur',
+  'South Central Railway (SCR) - Secunderabad',
+  'South East Central Railway (SECR) - Bilaspur',
+  'South Eastern Railway (SER) - Garden Reach, Kolkata',
+  'South Western Railway (SWR) - Hubballi',
+  'Southern Railway (SR) - Chennai',
+  'West Central Railway (WCR) - Jabalpur',
+  'Western Railway (WR) - Mumbai Central',
+  'Metro Railway, Kolkata - Kolkata',
+  'South Coast Railway (SCoR) - Visakhapatnam'
+];
 
 export default function SuperAdminDashboard() {
   const [branchAdmins, setBranchAdmins] = useState([]);
@@ -16,13 +37,10 @@ export default function SuperAdminDashboard() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [phone, setPhone] = useState('');
-  const [employeeId, setEmployeeId] = useState('');
+  const [branchName, setBranchName] = useState('');
+  const [selectedZone, setSelectedZone] = useState('');
   const [selectedState, setSelectedState] = useState('');
   const [selectedCity, setSelectedCity] = useState('');
-  
-  // Search & Filter state
-  const [stateSearch, setStateSearch] = useState('');
-  const [citySearch, setCitySearch] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
 
   const fetchStates = async () => {
@@ -78,7 +96,7 @@ export default function SuperAdminDashboard() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!name || !email || (!editingAdmin && !password) || !selectedState || !selectedCity) {
+    if (!branchName || !selectedZone || !name || !email || (!editingAdmin && !password) || !selectedState || !selectedCity) {
       alert('Please fill out all required fields');
       return;
     }
@@ -91,7 +109,8 @@ export default function SuperAdminDashboard() {
           email,
           password: password || undefined,
           phone,
-          employee_id: employeeId,
+          division: branchName,
+          zone: selectedZone,
           state: selectedState,
           city: selectedCity
         });
@@ -107,9 +126,9 @@ export default function SuperAdminDashboard() {
           email,
           password,
           role: 'branch_admin',
-          division: selectedCity, // Set division to City name
+          division: branchName,
+          zone: selectedZone,
           phone,
-          employee_id: employeeId,
           state: selectedState,
           city: selectedCity
         });
@@ -130,7 +149,8 @@ export default function SuperAdminDashboard() {
     setEmail(admin.email);
     setPassword('');
     setPhone(admin.phone || '');
-    setEmployeeId(admin.employee_id || '');
+    setBranchName(admin.division || '');
+    setSelectedZone(admin.zone || '');
     setSelectedState(admin.state || '');
     setSelectedCity(admin.city || '');
     setShowModal(true);
@@ -142,18 +162,19 @@ export default function SuperAdminDashboard() {
     setEmail('');
     setPassword('');
     setPhone('');
-    setEmployeeId('');
+    setBranchName('');
+    setSelectedZone('');
     setSelectedState('');
     setSelectedCity('');
     setShowModal(true);
   };
 
-  const filteredStates = states.filter(s => s.toLowerCase().includes(stateSearch.toLowerCase()));
-  const filteredDistricts = districts.filter(d => d.toLowerCase().includes(citySearch.toLowerCase()));
   const filteredAdmins = branchAdmins.filter(admin => 
     admin.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     admin.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    admin.city?.toLowerCase().includes(searchTerm.toLowerCase())
+    admin.city?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    admin.division?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    admin.zone?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -221,7 +242,7 @@ export default function SuperAdminDashboard() {
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
             <input
               type="text"
-              placeholder="Search by name, email, or city..."
+              placeholder="Search by name, email, city, branch..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-lg text-xs bg-slate-50 focus:outline-none focus:bg-white focus:border-blue-500"
@@ -240,7 +261,8 @@ export default function SuperAdminDashboard() {
                 <tr className="bg-slate-50 border-b border-slate-100 text-slate-500 font-semibold">
                   <th className="p-4">Name</th>
                   <th className="p-4">Email</th>
-                  <th className="p-4">Employee ID</th>
+                  <th className="p-4">Branch/Depo</th>
+                  <th className="p-4">Zone</th>
                   <th className="p-4">State</th>
                   <th className="p-4">City</th>
                   <th className="p-4">Phone</th>
@@ -252,9 +274,10 @@ export default function SuperAdminDashboard() {
                   <tr key={admin.id} className="border-b border-slate-100 hover:bg-slate-50/50">
                     <td className="p-4 font-bold text-slate-900">{admin.name}</td>
                     <td className="p-4 font-mono">{admin.email}</td>
-                    <td className="p-4 font-semibold text-slate-650">{admin.employee_id || 'N/A'}</td>
+                    <td className="p-4 font-bold text-blue-600">{admin.division || 'N/A'}</td>
+                    <td className="p-4 font-semibold text-slate-700">{admin.zone || 'N/A'}</td>
                     <td className="p-4 font-medium text-slate-700">{admin.state || 'N/A'}</td>
-                    <td className="p-4 font-bold text-blue-600">{admin.city || 'N/A'}</td>
+                    <td className="p-4 font-medium text-slate-700">{admin.city || 'N/A'}</td>
                     <td className="p-4 text-slate-500">{admin.phone || 'N/A'}</td>
                     <td className="p-4 text-center">
                       <button
@@ -276,11 +299,38 @@ export default function SuperAdminDashboard() {
       {/* Appointment/Edit Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-slate-900/40 flex items-center justify-center p-4 z-50 overflow-y-auto">
-          <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-lg shadow-2xl p-6 relative">
+          <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-lg shadow-2xl p-6 relative my-8">
             <h2 className="text-xl font-bold text-slate-900 border-b border-slate-100 pb-3">
               {editingAdmin ? 'Edit Administrator Details' : 'Appoint Branch Administrator'}
             </h2>
             <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Branch/Depo Name</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="E.g. Mumbai Central Depo"
+                  value={branchName}
+                  onChange={(e) => setBranchName(e.target.value)}
+                  className="w-full border border-slate-200 rounded-lg p-2.5 text-xs focus:outline-none focus:border-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Select Zone</label>
+                <select
+                  required
+                  value={selectedZone}
+                  onChange={(e) => setSelectedZone(e.target.value)}
+                  className="w-full border border-slate-200 rounded-lg p-2.5 text-xs focus:outline-none bg-white"
+                >
+                  <option value="" disabled>-- Choose Zone --</option>
+                  {RAILWAY_ZONES.map(z => (
+                    <option key={z} value={z}>{z}</option>
+                  ))}
+                </select>
+              </div>
+
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Full Name</label>
                 <input
@@ -295,31 +345,6 @@ export default function SuperAdminDashboard() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Email ID</label>
-                  <input
-                    type="email"
-                    required
-                    placeholder="E.g. rajesh@thermalportal.in"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full border border-slate-200 rounded-lg p-2.5 text-xs focus:outline-none focus:border-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Password</label>
-                  <input
-                    type="password"
-                    required={!editingAdmin}
-                    placeholder={editingAdmin ? 'Leave blank to keep same' : 'Minimum 6 characters'}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="w-full border border-slate-200 rounded-lg p-2.5 text-xs focus:outline-none focus:border-blue-500"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
                   <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Phone Number</label>
                   <input
                     type="text"
@@ -330,37 +355,42 @@ export default function SuperAdminDashboard() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Employee ID</label>
+                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Email ID</label>
                   <input
-                    type="text"
-                    placeholder="E.g. IR-BRN-501"
-                    value={employeeId}
-                    onChange={(e) => setEmployeeId(e.target.value)}
+                    type="email"
+                    required
+                    placeholder="E.g. rajesh@indianrailways.gov.in"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
                     className="w-full border border-slate-200 rounded-lg p-2.5 text-xs focus:outline-none focus:border-blue-500"
                   />
                 </div>
               </div>
 
-              {/* State & City selectors (Searchable & Cascading) */}
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Password</label>
+                <input
+                  type="password"
+                  required={!editingAdmin}
+                  placeholder={editingAdmin ? 'Leave blank to keep same' : 'Minimum 6 characters'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full border border-slate-200 rounded-lg p-2.5 text-xs focus:outline-none focus:border-blue-500"
+                />
+              </div>
+
+              {/* State & City selectors (Cascading simple dropdowns) */}
               <div className="grid grid-cols-2 gap-4 border-t border-slate-100 pt-4">
                 <div>
                   <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Select State</label>
-                  <input
-                    type="text"
-                    placeholder="Search State..."
-                    value={stateSearch}
-                    onChange={(e) => setStateSearch(e.target.value)}
-                    className="w-full border border-slate-200 rounded-t-lg p-2 text-[10px] focus:outline-none bg-slate-50"
-                  />
                   <select
                     required
-                    size={4}
                     value={selectedState}
                     onChange={(e) => setSelectedState(e.target.value)}
-                    className="w-full border border-t-0 border-slate-200 rounded-b-lg p-2.5 text-xs focus:outline-none h-28"
+                    className="w-full border border-slate-200 rounded-lg p-2.5 text-xs focus:outline-none bg-white"
                   >
                     <option value="" disabled>-- Choose State --</option>
-                    {filteredStates.map(s => (
+                    {states.map(s => (
                       <option key={s} value={s}>{s}</option>
                     ))}
                   </select>
@@ -368,24 +398,15 @@ export default function SuperAdminDashboard() {
 
                 <div>
                   <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Select District/City</label>
-                  <input
-                    type="text"
-                    placeholder="Search District..."
-                    value={citySearch}
-                    onChange={(e) => setCitySearch(e.target.value)}
-                    className="w-full border border-slate-200 rounded-t-lg p-2 text-[10px] focus:outline-none bg-slate-50"
-                    disabled={!selectedState}
-                  />
                   <select
                     required
-                    size={4}
                     value={selectedCity}
                     disabled={!selectedState}
                     onChange={(e) => setSelectedCity(e.target.value)}
-                    className="w-full border border-t-0 border-slate-200 rounded-b-lg p-2.5 text-xs focus:outline-none h-28"
+                    className="w-full border border-slate-200 rounded-lg p-2.5 text-xs focus:outline-none bg-white"
                   >
                     <option value="" disabled>-- Choose District --</option>
-                    {filteredDistricts.map(d => (
+                    {districts.map(d => (
                       <option key={d} value={d}>{d}</option>
                     ))}
                   </select>

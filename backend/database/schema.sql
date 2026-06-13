@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS users (
   city TEXT,
   phone TEXT,
   employee_id TEXT UNIQUE,
+  zone TEXT,
   parent_id TEXT REFERENCES users(id) ON DELETE SET NULL,
   is_active INTEGER NOT NULL DEFAULT 1,
   reset_otp TEXT,
