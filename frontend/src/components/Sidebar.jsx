@@ -5,11 +5,7 @@ import api from '../api';
 import {
   LayoutDashboard,
   Train,
-  AlertOctagon,
   Users,
-  TrendingUp,
-  FileBarChart2,
-  Settings,
   History,
   FileSpreadsheet,
   LogOut,
@@ -24,6 +20,15 @@ export default function Sidebar() {
   const [notifications, setNotifications] = useState([]);
   const [showNotif, setShowNotif] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   useEffect(() => {
     const fetchNotifs = async () => {
@@ -120,7 +125,7 @@ export default function Sidebar() {
               <span>{link.label}</span>
             </div>
             {link.badgeCount > 0 && (
-              <span className="px-2 py-0.5 text-[10px] bg-red-655 bg-red-600 text-white font-bold rounded-full">
+              <span className="px-2 py-0.5 text-[10px] bg-red-600 text-white font-bold rounded-full">
                 {link.badgeCount}
               </span>
             )}
@@ -162,7 +167,7 @@ export default function Sidebar() {
               {initials}
             </div>
             <div className="min-w-0">
-              <p className="text-xs font-bold text-slate-905 text-slate-900 truncate" title={user?.name}>
+              <p className="text-xs font-bold text-slate-900 truncate" title={user?.name}>
                 {user?.name}
               </p>
               <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider capitalize">
@@ -181,7 +186,7 @@ export default function Sidebar() {
                     setShowNotif(!showNotif);
                     if (!showNotif) handleMarkRead();
                   }}
-                  className={`p-2 border border-slate-200 text-slate-550 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition relative shadow-sm ${showNotif ? 'bg-slate-100' : 'bg-white'}`}
+                  className={`p-2 border border-slate-200 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition relative shadow-sm ${showNotif ? 'bg-slate-100' : 'bg-white'}`}
                   title="Notifications"
                 >
                   <Bell className="w-4 h-4" />
@@ -191,7 +196,7 @@ export default function Sidebar() {
                 </button>
                 <button
                   onClick={handleLogout}
-                  className="p-2 hover:bg-slate-100 text-slate-500 hover:text-red-605 hover:text-red-600 rounded-lg border border-slate-200 transition bg-white shadow-sm"
+                  className="p-2 hover:bg-slate-100 text-slate-500 hover:text-red-600 rounded-lg border border-slate-200 transition bg-white shadow-sm"
                   title="Log Out"
                 >
                   <LogOut className="w-4 h-4" />
@@ -206,36 +211,40 @@ export default function Sidebar() {
 
   return (
     <>
-      {/* Mobile Top Navbar */}
-      <div className="flex md:hidden items-center justify-between bg-white border-b border-slate-200 px-6 py-4 text-slate-900">
-        <button onClick={() => setMobileOpen(true)} className="text-slate-500 hover:text-slate-900">
-          <Menu className="w-6 h-6" />
-        </button>
-        <span className="font-bold text-sm flex items-center gap-1.5">
-          <img src="/ir-logo.png" className="w-5 h-5 object-contain" alt="IR logo" />
-          Indian Railways
-        </span>
-        {user?.role !== 'super_admin' ? (
-          <div className="relative">
-            <button onClick={() => { setShowNotif(!showNotif); handleMarkRead(); }} className="relative text-slate-500 hover:text-slate-900">
-              <Bell className="w-5 h-5" />
-              {unreadCount > 0 && (
-                <span className="absolute top-0 right-0 w-2 h-2 bg-red-655 bg-red-600 rounded-full" />
-              )}
-            </button>
-          </div>
-        ) : (
-          <div className="w-5" /> // Empty placeholder to balance flex row
-        )}
-      </div>
+      {/* Mobile Top Navbar - Rendered strictly if window width < 768px */}
+      {isMobile && (
+        <div className="flex md:hidden items-center justify-between bg-white border-b border-slate-200 px-6 py-4 text-slate-900 w-full z-40">
+          <button onClick={() => setMobileOpen(true)} className="text-slate-500 hover:text-slate-900">
+            <Menu className="w-6 h-6" />
+          </button>
+          <span className="font-bold text-sm flex items-center gap-1.5">
+            <img src="/ir-logo.png" className="w-5 h-5 object-contain" alt="IR logo" />
+            Indian Railways
+          </span>
+          {user?.role !== 'super_admin' ? (
+            <div className="relative">
+              <button onClick={() => { setShowNotif(!showNotif); handleMarkRead(); }} className="relative text-slate-500 hover:text-slate-900">
+                <Bell className="w-5 h-5" />
+                {unreadCount > 0 && (
+                  <span className="absolute top-0 right-0 w-2 h-2 bg-red-600 rounded-full" />
+                )}
+              </button>
+            </div>
+          ) : (
+            <div className="w-5" /> // Empty placeholder to balance flex row
+          )}
+        </div>
+      )}
 
-      {/* Desktop Sidebar wrapper */}
-      <aside className="hidden md:block w-64 h-screen shrink-0 sticky top-0 overflow-y-auto">
-        <SidebarContent />
-      </aside>
+      {/* Desktop Sidebar wrapper - Rendered strictly if window width >= 768px */}
+      {!isMobile && (
+        <aside className="hidden md:block w-64 h-screen shrink-0 sticky top-0 overflow-y-auto z-40">
+          <SidebarContent />
+        </aside>
+      )}
 
       {/* Mobile Sidebar overlay */}
-      {mobileOpen && (
+      {isMobile && mobileOpen && (
         <div className="fixed inset-0 z-50 flex md:hidden">
           <div className="fixed inset-0 bg-slate-900/40" onClick={() => setMobileOpen(false)} />
           <div className="relative w-64 max-w-xs h-full">
