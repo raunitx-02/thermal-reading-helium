@@ -1,0 +1,45 @@
+# Dependency directories
+node_modules/
+jspm_packages/
+web_modules/
+
+# Build outputs
+dist/
+build/
+out/
+.next/
+
+# Environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.env
+
+# Operating System files
+.DS_Store
+Thumbs.db
+
+# Database files
+backend/database/thermal.db
+backend/database/thermal.db-shm
+backend/database/thermal.db-wal
+
+# Log files
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# IDEs and editors
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Uploaded reports
+backend/uploads/*
+!backend/uploads/.gitkeep

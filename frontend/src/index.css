@@ -1,0 +1,30 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-slate-50 text-slate-900 font-sans antialiased selection:bg-blue-500/10 selection:text-blue-900;
+  }
+}
+
+/* Premium Light Panel & Card Styles */
+.glass-panel {
+  @apply bg-white border border-slate-200 rounded-xl shadow-sm shadow-slate-100/50;
+}
+
+.glass-card {
+  @apply bg-white border border-slate-200/80 rounded-lg hover:border-slate-300 hover:shadow-md hover:shadow-slate-100/40 transition-all duration-300;
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  @apply bg-slate-100;
+}
+::-webkit-scrollbar-thumb {
+  @apply bg-slate-300 rounded-full hover:bg-slate-400;
+}
