@@ -211,8 +211,8 @@ export default function Sidebar() {
 
   return (
     <>
-      {/* Mobile Top Navbar - Rendered strictly if window width < 768px */}
-      {isMobile && (
+      {/* Mobile Top Navbar - Commented out for diagnostic test */}
+      {/* {isMobile && (
         <div className="flex md:hidden items-center justify-between bg-white border-b border-slate-200 px-6 py-4 text-slate-900 w-full z-40">
           <button onClick={() => setMobileOpen(true)} className="text-slate-500 hover:text-slate-900">
             <Menu className="w-6 h-6" />
@@ -231,10 +231,10 @@ export default function Sidebar() {
               </button>
             </div>
           ) : (
-            <div className="w-5" /> // Empty placeholder to balance flex row
+            <div className="w-5" />
           )}
         </div>
-      )}
+      )} */}
 
       {/* Desktop Sidebar wrapper - Rendered strictly if window width >= 768px */}
       {!isMobile && (
