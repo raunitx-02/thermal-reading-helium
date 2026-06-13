@@ -207,7 +207,7 @@ export default function Sidebar() {
   return (
     <>
       {/* Mobile Top Navbar */}
-      <div className="md:hidden flex items-center justify-between bg-white border-b border-slate-200 px-6 py-4 text-slate-900">
+      <div className="flex md:hidden items-center justify-between bg-white border-b border-slate-200 px-6 py-4 text-slate-900">
         <button onClick={() => setMobileOpen(true)} className="text-slate-500 hover:text-slate-900">
           <Menu className="w-6 h-6" />
         </button>
