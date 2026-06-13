@@ -62,7 +62,7 @@ export default function ForgotPassword() {
             <KeyRound className="w-8 h-8 text-amber-600" />
           </div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900 font-sans">Reset Password</h1>
-          <p className="text-slate-500 text-sm mt-1 font-sans">Bogie Thermal Portal Credentials</p>
+          <p className="text-slate-500 text-sm mt-1 font-sans">Indian Railways Credentials</p>
         </div>
 
         {error && (

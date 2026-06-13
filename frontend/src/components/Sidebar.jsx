@@ -87,12 +87,12 @@ export default function Sidebar() {
       {/* Brand Header */}
       <div className="p-6 border-b border-slate-200 flex items-center justify-between bg-slate-50/50">
         <div>
-          <h2 className="font-bold text-lg text-slate-900 flex items-center gap-2">
-            <Train className="w-5 h-5 text-blue-600" />
-            Thermal Portal
+          <h2 className="font-bold text-base text-slate-900 flex items-center gap-2">
+            <img src="/ir-logo.png" className="w-8 h-8 object-contain" alt="IR logo" />
+            Indian Railways
           </h2>
-          <span className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider block mt-0.5">
-            Indian Railways - {user?.division} Div
+          <span className="text-[10px] text-blue-650 text-blue-600 font-bold uppercase tracking-wider block mt-0.5">
+            Save Life Smartly
           </span>
         </div>
         <button onClick={() => setMobileOpen(false)} className="md:hidden text-slate-500 hover:text-slate-900">
@@ -209,7 +209,10 @@ export default function Sidebar() {
         <button onClick={() => setMobileOpen(true)} className="text-slate-500 hover:text-slate-900">
           <Menu className="w-6 h-6" />
         </button>
-        <span className="font-bold text-sm">Thermal Inspection</span>
+        <span className="font-bold text-sm flex items-center gap-1.5">
+          <img src="/ir-logo.png" className="w-5 h-5 object-contain" alt="IR logo" />
+          Indian Railways
+        </span>
         <div className="relative">
           <button onClick={() => { setShowNotif(!showNotif); handleMarkRead(); }} className="relative text-slate-500 hover:text-slate-900">
             <Bell className="w-5 h-5" />

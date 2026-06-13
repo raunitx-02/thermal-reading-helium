@@ -44,11 +44,11 @@ export default function Login() {
 
       <div className="w-full max-w-md bg-white border border-slate-200 shadow-xl shadow-slate-100/60 rounded-xl p-8 relative z-10">
         <div className="flex flex-col items-center mb-8">
-          <div className="w-14 h-14 bg-blue-50 border border-blue-100 rounded-2xl flex items-center justify-center mb-3">
-            <Train className="w-8 h-8 text-blue-600" />
+          <div className="w-16 h-16 bg-white border border-slate-200 rounded-2xl flex items-center justify-center mb-3 p-1">
+            <img src="/ir-logo.png" className="w-12 h-12 object-contain" alt="IR Logo" />
           </div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Bogie Thermal Portal</h1>
-          <p className="text-slate-500 text-sm mt-1">Indian Railways Diagnostics</p>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Indian Railways</h1>
+          <p className="text-blue-600 font-bold text-xs mt-1">Save Life Smartly</p>
         </div>
 
         {error && (

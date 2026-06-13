@@ -8,7 +8,7 @@ exports.generatePdfReport = (stream, title, records) => {
   // Header Banner
   doc.rect(0, 0, doc.page.width, 80).fill('#0f172a');
   doc.fillColor('#ffffff').fontSize(16).text('INDIAN RAILWAYS', 30, 20, { bold: true });
-  doc.fontSize(12).text('Bogie Thermal Inspection & Analytics Portal', 30, 42);
+  doc.fontSize(11).text('Save Life Smartly', 30, 42);
   
   // Title
   doc.fillColor('#000000').fontSize(14).text(title, 30, 100, { bold: true });
@@ -114,7 +114,7 @@ exports.generateSessionPdfReport = (stream, session, readings) => {
   // 1. Header Banner
   doc.rect(0, 0, doc.page.width, 100).fill('#1e3a8a'); // Dark Blue banner
   doc.fillColor('#ffffff').fontSize(20).text('INDIAN RAILWAYS', 40, 25, { bold: true, tracking: 1 });
-  doc.fontSize(11).text('Bogie Thermal Health & Compliance Portal', 40, 52);
+  doc.fontSize(11).text('Save Life Smartly', 40, 52);
   doc.fontSize(9).text('AUTOMATED INSPECTION SERVICE REPORT', 40, 70);
 
   // 2. Metadata Section (Zebra styled card)

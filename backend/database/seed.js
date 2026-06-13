@@ -20,7 +20,7 @@ const today = new Date().toISOString().split('T')[0];
 
 // ─── 1. SYSTEM SETTINGS ────────────────────────────────────────────────────
 const settings = [
-  ['app_name', 'Bogie Thermal Inspection Portal', 'Application name'],
+  ['app_name', 'Indian Railways', 'Application name'],
   ['default_warning_threshold', '70', 'Default warning temperature threshold (°C)'],
   ['default_critical_threshold', '85', 'Default critical temperature threshold (°C)'],
   ['default_normal_min', '20', 'Default minimum normal temperature (°C)'],
@@ -31,7 +31,7 @@ const settings = [
   ['reminder_hour', '8', 'Hour to send daily reminder (24h format)'],
   ['working_days', 'Mon,Tue,Wed,Thu,Fri,Sat', 'Working days'],
   ['division_name', 'Mumbai Division', 'Railway division name'],
-  ['org_name', 'Indian Railways - Western Railway', 'Organization name'],
+  ['org_name', 'Indian Railways', 'Organization name'],
   ['idle_timeout_minutes', '30', 'Auto-logout after inactivity (minutes)'],
 ];
 
