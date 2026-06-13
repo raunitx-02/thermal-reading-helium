@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
 import api from '../../api';
-import { Users, MapPin, Plus, CheckCircle, Search, RefreshCw, Edit } from 'lucide-react';
+import { Users, MapPin, Plus, CheckCircle, Search, RefreshCw, Edit, Bell, LogOut } from 'lucide-react';
 
 const RAILWAY_ZONES = [
   'Central Railway (CR) - Mumbai',
@@ -24,6 +26,9 @@ const RAILWAY_ZONES = [
 ];
 
 export default function SuperAdminDashboard() {
+  const { logout } = useAuth();
+  const navigate = useNavigate();
+
   const [branchAdmins, setBranchAdmins] = useState([]);
   const [states, setStates] = useState([]);
   const [districts, setDistricts] = useState([]);
@@ -42,6 +47,10 @@ export default function SuperAdminDashboard() {
   const [selectedState, setSelectedState] = useState('');
   const [selectedCity, setSelectedCity] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+
+  // Notification states
+  const [notifications, setNotifications] = useState([]);
+  const [showNotif, setShowNotif] = useState(false);
 
   const fetchStates = async () => {
     try {
@@ -84,15 +93,39 @@ export default function SuperAdminDashboard() {
     setLoading(false);
   };
 
+  const fetchNotifs = async () => {
+    try {
+      const res = await api.get('/notifications');
+      if (res.data.success) setNotifications(res.data.data);
+    } catch (_) {}
+  };
+
   useEffect(() => {
     fetchBranchAdmins();
     fetchStates();
+    fetchNotifs();
+    const interval = setInterval(fetchNotifs, 15000);
+    return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
     fetchDistricts(selectedState);
     setSelectedCity('');
   }, [selectedState]);
+
+  const unreadCount = notifications.filter(n => !n.is_read).length;
+
+  const handleMarkRead = async () => {
+    try {
+      await api.put('/notifications/read-all');
+      setNotifications(prev => prev.map(n => ({ ...n, is_read: 1 })));
+    } catch (_) {}
+  };
+
+  const handleLogout = async () => {
+    await logout();
+    navigate('/login');
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -182,15 +215,66 @@ export default function SuperAdminDashboard() {
       {/* Title & Actions */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 pb-4">
         <div>
-          <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Super Admin Portal</h1>
-          <p className="text-slate-500 text-sm mt-1">Manage geographic branches and appoint Branch Admins across India</p>
+          <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Heat flow Management and Analysis</h1>
+          <p className="text-slate-500 text-sm mt-1">Monitor Every Steps Smartly</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 relative">
           <button onClick={startAdd} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm rounded-lg px-4 py-2.5 transition shadow-sm">
-            <Plus className="w-4 h-4" /> Appoint Branch Admin
+            <Plus className="w-4 h-4" /> Add New Depo
           </button>
-          <button onClick={fetchBranchAdmins} className="p-2.5 bg-white border border-slate-200 text-slate-650 hover:text-slate-900 rounded-lg transition shadow-sm">
+          
+          <button onClick={fetchBranchAdmins} className="p-2.5 bg-white border border-slate-200 text-slate-650 hover:text-slate-900 rounded-lg transition shadow-sm" title="Refresh List">
             <RefreshCw className="w-4 h-4" />
+          </button>
+
+          {/* Notification Bell */}
+          <div className="relative">
+            <button
+              onClick={() => {
+                setShowNotif(!showNotif);
+                if (!showNotif) handleMarkRead();
+              }}
+              className={`p-2.5 border border-slate-200 text-slate-500 hover:text-slate-900 hover:bg-slate-50 rounded-lg transition relative shadow-sm ${showNotif ? 'bg-slate-100' : 'bg-white'}`}
+              title="Notifications"
+            >
+              <Bell className="w-4 h-4" />
+              {unreadCount > 0 && (
+                <span className="absolute top-1 right-1 w-2 h-2 bg-red-650 bg-red-600 rounded-full" />
+              )}
+            </button>
+
+            {showNotif && (
+              <div className="absolute right-0 mt-2 w-80 bg-white border border-slate-200 rounded-xl shadow-xl p-4 max-h-80 overflow-y-auto z-50">
+                <h3 className="font-semibold text-xs text-slate-900 border-b border-slate-100 pb-2 mb-2 flex justify-between items-center">
+                  <span>Notifications</span>
+                  <button onClick={() => setShowNotif(false)} className="text-slate-400 hover:text-slate-950">✕</button>
+                </h3>
+                {notifications.length === 0 ? (
+                  <p className="text-[10px] text-slate-400 text-center py-4">No recent notifications</p>
+                ) : (
+                  <div className="space-y-2.5">
+                    {notifications.map(n => (
+                      <div key={n.id} className={`p-2 rounded-lg text-[10px] border ${n.is_read ? 'opacity-65 bg-slate-50/50 border-slate-100' : 'bg-blue-50/30 border-blue-100 text-slate-900'}`}>
+                        <p className="font-semibold text-slate-900">{n.title}</p>
+                        <p className="text-slate-600 mt-0.5">{n.message}</p>
+                        <span className="text-[8px] text-slate-400 mt-1 block">
+                          {new Date(n.created_at * 1000).toLocaleTimeString()}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Log Out */}
+          <button
+            onClick={handleLogout}
+            className="p-2.5 hover:bg-slate-100 text-slate-500 hover:text-red-600 rounded-lg border border-slate-200 transition bg-white shadow-sm"
+            title="Log Out"
+          >
+            <LogOut className="w-4 h-4" />
           </button>
         </div>
       </div>
