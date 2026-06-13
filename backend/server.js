@@ -53,9 +53,11 @@ const limiter = rateLimit({
 app.use('/api/', limiter);
 
 // Register API Routes
+app.use('/api/geo', require('./src/routes/geo'));
 app.use('/api/auth', require('./src/routes/auth'));
 app.use('/api/users', require('./src/routes/users'));
 app.use('/api/trains', require('./src/routes/trains'));
+app.use('/api/assignments', require('./src/routes/assignments'));
 app.use('/api/sessions', require('./src/routes/sessions'));
 app.use('/api/alerts', require('./src/routes/alerts'));
 app.use('/api/dashboard', require('./src/routes/dashboard'));

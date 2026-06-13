@@ -6,19 +6,17 @@ import Sidebar from './components/Sidebar';
 // Pages
 import Login from './pages/auth/Login';
 import ForgotPassword from './pages/auth/ForgotPassword';
-import AdminDashboard from './pages/admin/Dashboard';
-import AdminAlerts from './pages/admin/Alerts';
-import AdminTrains from './pages/admin/Trains';
-import AdminUsers from './pages/admin/Users';
-import AdminKpis from './pages/admin/Kpis';
-import AdminReports from './pages/admin/Reports';
-import AdminSettings from './pages/admin/Settings';
-import AdminAuditLogs from './pages/admin/AuditLogs';
-
-import InspectorDashboard from './pages/inspector/Dashboard';
 import InspectionFlow from './pages/inspector/InspectionFlow';
-import InspectorHistory from './pages/inspector/History';
-import InspectorKpi from './pages/inspector/Kpi';
+
+// New Roles Views
+import SuperAdminDashboard from './pages/super_admin/Dashboard';
+import BranchAdminDashboard from './pages/branch_admin/Dashboard';
+import BranchTrainsManager from './pages/branch_admin/BranchTrainsManager';
+import SupervisorDashboard from './pages/supervisor/Dashboard';
+import SupervisorEngineers from './pages/supervisor/SupervisorEngineers';
+import SupervisorAssignments from './pages/supervisor/SupervisorAssignments';
+import EngineerDashboard from './pages/ground_engineer/Dashboard';
+import EngineerHistory from './pages/ground_engineer/History';
 
 // Route Guards
 const ProtectedRoute = ({ allowedRoles }) => {
@@ -34,7 +32,12 @@ const ProtectedRoute = ({ allowedRoles }) => {
 
   if (!user) return <Navigate to="/login" replace />;
   if (allowedRoles && !allowedRoles.includes(user.role)) {
-    return <Navigate to={user.role === 'admin' ? '/admin/dashboard' : '/inspector/dashboard'} replace />;
+    let homeUrl = '/login';
+    if (user.role === 'super_admin') homeUrl = '/super-admin/dashboard';
+    else if (user.role === 'branch_admin') homeUrl = '/branch-admin/dashboard';
+    else if (user.role === 'supervisor') homeUrl = '/supervisor/dashboard';
+    else if (user.role === 'ground_engineer') homeUrl = '/ground-engineer/dashboard';
+    return <Navigate to={homeUrl} replace />;
   }
 
   return (
@@ -56,26 +59,29 @@ export default function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
 
-          {/* Admin Protected Routes */}
-          <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
-            <Route path="/admin/dashboard" element={<AdminDashboard />} />
-            <Route path="/admin/alerts" element={<AdminAlerts />} />
-            <Route path="/admin/trains" element={<AdminTrains />} />
-            <Route path="/admin/users" element={<AdminUsers />} />
-            <Route path="/admin/kpis" element={<AdminKpis />} />
-            <Route path="/admin/reports" element={<AdminReports />} />
-            <Route path="/admin/settings" element={<AdminSettings />} />
-            <Route path="/admin/audit-logs" element={<AdminAuditLogs />} />
+          {/* Super Admin Protected Routes */}
+          <Route element={<ProtectedRoute allowedRoles={['super_admin']} />}>
+            <Route path="/super-admin/dashboard" element={<SuperAdminDashboard />} />
           </Route>
 
-          {/* Inspector Protected Routes */}
-          <Route element={<ProtectedRoute allowedRoles={['inspector']} />}>
-            <Route path="/inspector/dashboard" element={<InspectorDashboard />} />
-            <Route path="/inspector/inspection/:sessionId" element={<InspectionFlow />} />
-            <Route path="/inspector/history" element={<InspectorHistory />} />
-            <Route path="/inspector/kpi" element={<InspectorKpi />} />
-            {/* Redirect /inspector/new-inspection directly to dashboard to pick a train */}
-            <Route path="/inspector/new-inspection" element={<Navigate to="/inspector/dashboard" replace />} />
+          {/* Branch Admin Protected Routes */}
+          <Route element={<ProtectedRoute allowedRoles={['branch_admin']} />}>
+            <Route path="/branch-admin/dashboard" element={<BranchAdminDashboard />} />
+            <Route path="/branch-admin/trains" element={<BranchTrainsManager />} />
+          </Route>
+
+          {/* Supervisor Protected Routes */}
+          <Route element={<ProtectedRoute allowedRoles={['supervisor']} />}>
+            <Route path="/supervisor/dashboard" element={<SupervisorDashboard />} />
+            <Route path="/supervisor/ground-engineers" element={<SupervisorEngineers />} />
+            <Route path="/supervisor/assignments" element={<SupervisorAssignments />} />
+          </Route>
+
+          {/* Ground Engineer Protected Routes */}
+          <Route element={<ProtectedRoute allowedRoles={['ground_engineer']} />}>
+            <Route path="/ground-engineer/dashboard" element={<EngineerDashboard />} />
+            <Route path="/ground-engineer/history" element={<EngineerHistory />} />
+            <Route path="/ground-engineer/inspection/:sessionId" element={<InspectionFlow />} />
           </Route>
 
           {/* Default Route */}

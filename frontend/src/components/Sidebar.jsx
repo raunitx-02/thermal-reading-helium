@@ -51,25 +51,31 @@ export default function Sidebar() {
     navigate('/login');
   };
 
-  const adminLinks = [
-    { to: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { to: '/admin/alerts', label: 'Alerts Logs', icon: AlertOctagon, badgeCount: unreadCount },
-    { to: '/admin/trains', label: 'Trains & Zones', icon: Train },
-    { to: '/admin/users', label: 'Users Config', icon: Users },
-    { to: '/admin/kpis', label: 'KPI Management', icon: TrendingUp },
-    { to: '/admin/reports', label: 'Export Reports', icon: FileSpreadsheet },
-    { to: '/admin/audit-logs', label: 'System Audits', icon: FileBarChart2 },
-    { to: '/admin/settings', label: 'System Settings', icon: Settings },
+  const superAdminLinks = [
+    { to: '/super-admin/dashboard', label: 'Dashboard', icon: LayoutDashboard }
   ];
 
-  const inspectorLinks = [
-    { to: '/inspector/dashboard', label: 'Overview', icon: LayoutDashboard },
-    { to: '/inspector/new-inspection', label: 'New Reading', icon: Train },
-    { to: '/inspector/history', label: 'Inspect Logs', icon: History },
-    { to: '/inspector/kpi', label: 'My KPIs', icon: TrendingUp },
+  const branchAdminLinks = [
+    { to: '/branch-admin/dashboard', label: 'Supervisors', icon: Users },
+    { to: '/branch-admin/trains', label: 'Configure Trains', icon: Train }
   ];
 
-  const links = user?.role === 'admin' ? adminLinks : inspectorLinks;
+  const supervisorLinks = [
+    { to: '/supervisor/dashboard', label: 'Inspections Logs', icon: LayoutDashboard },
+    { to: '/supervisor/ground-engineers', label: 'Ground Engineers', icon: Users },
+    { to: '/supervisor/assignments', label: 'Assign Inspections', icon: FileSpreadsheet }
+  ];
+
+  const groundEngineerLinks = [
+    { to: '/ground-engineer/dashboard', label: 'Overview', icon: LayoutDashboard },
+    { to: '/ground-engineer/history', label: 'Inspection History', icon: History }
+  ];
+
+  let links = [];
+  if (user?.role === 'super_admin') links = superAdminLinks;
+  else if (user?.role === 'branch_admin') links = branchAdminLinks;
+  else if (user?.role === 'supervisor') links = supervisorLinks;
+  else if (user?.role === 'ground_engineer') links = groundEngineerLinks;
 
   // Generate initials for avatar
   const initials = user?.name

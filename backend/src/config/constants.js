@@ -1,5 +1,10 @@
 module.exports = {
-  ROLES: { ADMIN: 'admin', INSPECTOR: 'inspector' },
+  ROLES: {
+    SUPER_ADMIN: 'super_admin',
+    BRANCH_ADMIN: 'branch_admin',
+    SUPERVISOR: 'supervisor',
+    GROUND_ENGINEER: 'ground_engineer'
+  },
   ALERT_TYPES: { WARNING: 'warning', CRITICAL: 'critical' },
   READING_STATUS: { NORMAL: 'normal', WARNING: 'warning', CRITICAL: 'critical' },
   SESSION_STATUS: { DRAFT: 'draft', SUBMITTED: 'submitted' },

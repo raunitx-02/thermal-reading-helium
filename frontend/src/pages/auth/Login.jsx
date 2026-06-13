@@ -20,7 +20,12 @@ export default function Login() {
       const data = await login(email, password);
       if (data.success) {
         const role = data.data.user.role;
-        navigate(role === 'admin' ? '/admin/dashboard' : '/inspector/dashboard');
+        let dest = '/login';
+        if (role === 'super_admin') dest = '/super-admin/dashboard';
+        else if (role === 'branch_admin') dest = '/branch-admin/dashboard';
+        else if (role === 'supervisor') dest = '/supervisor/dashboard';
+        else if (role === 'ground_engineer') dest = '/ground-engineer/dashboard';
+        navigate(dest);
       } else {
         setError(data.message || 'Login failed');
       }

@@ -59,6 +59,14 @@ exports.createSession = (req, res, next) => {
     if (!train_id || !inspection_date) return res.status(400).json({ success: false, message: 'train_id and inspection_date required' });
     
     const db = getDb();
+
+    // Check Ground Engineer assignment
+    if (req.user.role === 'ground_engineer') {
+      const assigned = db.prepare('SELECT id FROM assignments WHERE train_id = ? AND ground_engineer_id = ? AND status = "assigned"').get(train_id, req.user.id);
+      if (!assigned) {
+        return res.status(403).json({ success: false, message: 'You are not assigned to inspect this train' });
+      }
+    }
     
     // Check if open session already exists for this train on this date by this inspector
     const existing = db.prepare(`
@@ -143,7 +151,7 @@ exports.saveReading = (req, res, next) => {
         `).run(alertId, zone_id, readingId, session_id, status, temperature, zone.coach_id, zone.train_id, now);
         
         // Push in-app notification to all admins
-        const admins = db.prepare("SELECT id FROM users WHERE role = 'admin'").all();
+        const admins = db.prepare("SELECT id FROM users WHERE role IN ('super_admin', 'branch_admin')").all();
         const msg = `Alert! ${zone.train_number} coach ${zone.coach_number} zone "${zone.zone_name}" recorded high temperature: ${temperature}°C (${status.toUpperCase()})`;
         admins.forEach(admin => {
           db.prepare(`
@@ -180,6 +188,13 @@ exports.submitSession = (req, res, next) => {
       SET status = 'submitted', remarks = ?, submitted_at = ?, updated_at = ?
       WHERE id = ?
     `).run(remarks || null, now, now, id);
+
+    // Update corresponding assignment
+    db.prepare(`
+      UPDATE assignments 
+      SET status = 'completed', completed_at = ?
+      WHERE train_id = ? AND ground_engineer_id = ? AND status = 'assigned'
+    `).run(now, session.train_id, session.inspector_id);
     
     // Update KPI metrics for today
     const dateStr = session.inspection_date;

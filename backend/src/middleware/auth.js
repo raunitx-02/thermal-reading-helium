@@ -15,8 +15,11 @@ const authMiddleware = (requiredRole = null) => (req, res, next) => {
     if (!user || !user.is_active) {
       return res.status(401).json({ success: false, message: 'User not found or inactive' });
     }
-    if (requiredRole && user.role !== requiredRole) {
-      return res.status(403).json({ success: false, message: 'Insufficient permissions' });
+    if (requiredRole) {
+      const allowed = Array.isArray(requiredRole) ? requiredRole : [requiredRole];
+      if (!allowed.includes(user.role)) {
+        return res.status(403).json({ success: false, message: 'Insufficient permissions' });
+      }
     }
     req.user = user;
     next();

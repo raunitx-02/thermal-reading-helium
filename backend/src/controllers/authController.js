@@ -32,7 +32,7 @@ exports.login = async (req, res, next) => {
       data: {
         accessToken,
         refreshToken,
-        user: { id: user.id, name: user.name, email: user.email, role: user.role, division: user.division, phone: user.phone, employee_id: user.employee_id }
+        user: { id: user.id, name: user.name, email: user.email, role: user.role, division: user.division, state: user.state, city: user.city, parent_id: user.parent_id, phone: user.phone, employee_id: user.employee_id }
       }
     });
   } catch (err) { next(err); }
@@ -104,6 +104,6 @@ exports.resetPassword = async (req, res, next) => {
 
 exports.me = (req, res) => {
   const db = getDb();
-  const user = db.prepare('SELECT id, name, email, role, division, phone, employee_id, last_login, created_at FROM users WHERE id = ?').get(req.user.id);
+  const user = db.prepare('SELECT id, name, email, role, division, state, city, phone, employee_id, parent_id, last_login, created_at FROM users WHERE id = ?').get(req.user.id);
   res.json({ success: true, data: user });
 };

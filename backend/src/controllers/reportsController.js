@@ -147,3 +147,34 @@ exports.downloadReport = async (req, res, next) => {
     }
   } catch (err) { next(err); }
 };
+
+exports.downloadSessionReport = (req, res, next) => {
+  try {
+    const { sessionId } = req.params;
+    const db = getDb();
+    
+    const session = db.prepare(`
+      SELECT s.*, t.train_number, t.train_name, t.route, u.name as inspector_name
+      FROM inspection_sessions s
+      JOIN trains t ON s.train_id = t.id
+      JOIN users u ON s.inspector_id = u.id
+      WHERE s.id = ?
+    `).get(sessionId);
+
+    if (!session) return res.status(404).send('Inspection session not found');
+
+    const readings = db.prepare(`
+      SELECT r.*, z.zone_name, z.zone_type, c.coach_number, c.coach_type
+      FROM thermal_readings r
+      JOIN zones z ON r.zone_id = z.id
+      JOIN coaches c ON z.coach_id = c.id
+      WHERE r.session_id = ?
+      ORDER BY c.sequence_order, z.zone_name
+    `).all(sessionId);
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename=inspection_report_${session.train_number}_${session.inspection_date}.pdf`);
+    
+    exportService.generateSessionPdfReport(res, session, readings);
+  } catch (err) { next(err); }
+};

@@ -92,7 +92,7 @@ export default function InspectionFlow() {
       const res = await api.post(`/sessions/${sessionId}/submit`, { remarks });
       if (res.data.success) {
         alert('Inspection logs locked and submitted successfully.');
-        navigate('/inspector/dashboard');
+        navigate('/ground-engineer/dashboard');
       }
     } catch (_) {}
     setSubmitting(false);
@@ -113,7 +113,7 @@ export default function InspectionFlow() {
   return (
     <div className="p-6 md:p-8 space-y-6 max-w-4xl">
       <div className="flex items-center gap-3 border-b border-slate-200 pb-4">
-        <button onClick={() => navigate('/inspector/dashboard')} className="p-2 bg-white border border-slate-200 text-slate-500 hover:text-slate-900 rounded-lg transition shadow-sm">
+        <button onClick={() => navigate('/ground-engineer/dashboard')} className="p-2 bg-white border border-slate-200 text-slate-500 hover:text-slate-900 rounded-lg transition shadow-sm">
           <ArrowLeft className="w-4 h-4" />
         </button>
         <div>

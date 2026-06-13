@@ -10,10 +10,13 @@ CREATE TABLE IF NOT EXISTS users (
   name TEXT NOT NULL,
   email TEXT UNIQUE NOT NULL,
   password_hash TEXT NOT NULL,
-  role TEXT NOT NULL CHECK(role IN ('admin', 'inspector')),
+  role TEXT NOT NULL CHECK(role IN ('super_admin', 'branch_admin', 'supervisor', 'ground_engineer')),
   division TEXT NOT NULL DEFAULT 'Central',
+  state TEXT,
+  city TEXT,
   phone TEXT,
   employee_id TEXT UNIQUE,
+  parent_id TEXT REFERENCES users(id) ON DELETE SET NULL,
   is_active INTEGER NOT NULL DEFAULT 1,
   reset_otp TEXT,
   reset_otp_expires INTEGER,
@@ -30,6 +33,10 @@ CREATE TABLE IF NOT EXISTS trains (
   route TEXT NOT NULL,
   division TEXT NOT NULL,
   frequency TEXT NOT NULL DEFAULT 'Daily',
+  custom_safe_max REAL DEFAULT 60.0,
+  custom_warning_max REAL DEFAULT 70.0,
+  custom_critical_max REAL DEFAULT 85.0,
+  created_by TEXT REFERENCES users(id),
   is_active INTEGER NOT NULL DEFAULT 1,
   created_at INTEGER NOT NULL DEFAULT (unixepoch()),
   updated_at INTEGER NOT NULL DEFAULT (unixepoch())
@@ -168,7 +175,19 @@ CREATE TABLE IF NOT EXISTS refresh_tokens (
   created_at INTEGER NOT NULL DEFAULT (unixepoch())
 );
 
+-- Assignments table
+CREATE TABLE IF NOT EXISTS assignments (
+  id TEXT PRIMARY KEY,
+  train_id TEXT REFERENCES trains(id) ON DELETE CASCADE,
+  ground_engineer_id TEXT REFERENCES users(id) ON DELETE CASCADE,
+  supervisor_id TEXT REFERENCES users(id) ON DELETE SET NULL,
+  status TEXT NOT NULL DEFAULT 'assigned' CHECK(status IN ('assigned', 'completed')),
+  assigned_at INTEGER NOT NULL DEFAULT (unixepoch()),
+  completed_at INTEGER
+);
+
 -- Indexes for performance
+CREATE INDEX IF NOT EXISTS idx_assignments_engineer ON assignments(ground_engineer_id);
 CREATE INDEX IF NOT EXISTS idx_thermal_readings_session ON thermal_readings(session_id);
 CREATE INDEX IF NOT EXISTS idx_thermal_readings_zone ON thermal_readings(zone_id);
 CREATE INDEX IF NOT EXISTS idx_inspection_sessions_inspector ON inspection_sessions(inspector_id);

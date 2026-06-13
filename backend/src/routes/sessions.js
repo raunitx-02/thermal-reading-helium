@@ -9,9 +9,9 @@ router.use(authMiddleware());
 router.get('/', sessionsController.getSessions);
 router.get('/:id', sessionsController.getSessionById);
 
-// Inspectors entry
-router.post('/', auditMiddleware('CREATE_SESSION', 'session'), sessionsController.createSession);
-router.post('/reading', sessionsController.saveReading);
-router.post('/:id/submit', auditMiddleware('SUBMIT_SESSION', 'session'), sessionsController.submitSession);
+// Inspectors/Ground Engineers entry
+router.post('/', authMiddleware(['ground_engineer']), auditMiddleware('CREATE_SESSION', 'session'), sessionsController.createSession);
+router.post('/reading', authMiddleware(['ground_engineer']), sessionsController.saveReading);
+router.post('/:id/submit', authMiddleware(['ground_engineer']), auditMiddleware('SUBMIT_SESSION', 'session'), sessionsController.submitSession);
 
 module.exports = router;

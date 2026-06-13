@@ -6,10 +6,11 @@ const xlsx = require('xlsx');
 exports.getAllTrains = (req, res, next) => {
   try {
     const db = getDb();
-    const { division, search } = req.query;
+    const { division, search, created_by } = req.query;
     let q = `SELECT t.*, COUNT(DISTINCT c.id) as coach_count FROM trains t LEFT JOIN coaches c ON c.train_id = t.id WHERE 1=1`;
     const params = [];
     if (division) { q += ' AND t.division = ?'; params.push(division); }
+    if (created_by) { q += ' AND t.created_by = ?'; params.push(created_by); }
     if (search) { q += ' AND (t.train_name LIKE ? OR t.train_number LIKE ?)'; params.push(`%${search}%`, `%${search}%`); }
     q += ' GROUP BY t.id ORDER BY t.train_number';
     res.json({ success: true, data: db.prepare(q).all(...params) });
@@ -28,12 +29,70 @@ exports.getTrainById = (req, res, next) => {
 
 exports.createTrain = (req, res, next) => {
   try {
-    const { train_number, train_name, route, division, frequency } = req.body;
+    const { train_number, train_name, route, division, frequency, custom_safe_max, custom_warning_max, custom_critical_max } = req.body;
     if (!train_number || !train_name || !route || !division) return res.status(400).json({ success: false, message: 'train_number, train_name, route, division required' });
+    
+    // Check IRCTC constraints
+    const irctcData = require('../config/irctcData');
+    const trainInfo = irctcData[train_number];
+    if (trainInfo) {
+      const city = req.user.city;
+      if (city && req.user.role === 'branch_admin') {
+        const cityNormalized = city.replace(/city|district/gi, '').trim().toLowerCase();
+        const matchesCity = trainInfo.stops.some(stop => stop.toLowerCase().includes(cityNormalized)) ||
+                            trainInfo.route.toLowerCase().includes(cityNormalized);
+        if (!matchesCity) {
+          return res.status(400).json({ success: false, message: "Train doesn't belongs to your city" });
+        }
+      }
+    }
+
     const db = getDb();
     const id = uuidv4(); const now = Math.floor(Date.now() / 1000);
-    db.prepare(`INSERT INTO trains (id, train_number, train_name, route, division, frequency, is_active, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?)`)
-      .run(id, train_number, train_name, route, division, frequency || 'Daily', now, now);
+    db.prepare(`INSERT INTO trains (id, train_number, train_name, route, division, frequency, custom_safe_max, custom_warning_max, custom_critical_max, created_by, is_active, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)`)
+      .run(id, train_number, train_name, route, division, frequency || 'Daily', custom_safe_max || 60.0, custom_warning_max || 70.0, custom_critical_max || 85.0, req.user.id, now, now);
+    
+    // Auto-populate default coaches & zones
+    const defaultCoaches = ['Loco', 'AC-2', 'AC-3', 'Pantry', 'SL', 'GEN'];
+    const insertCoach = db.prepare('INSERT INTO coaches (id, train_id, coach_number, coach_type, sequence_order, is_active, created_at) VALUES (?, ?, ?, ?, ?, 1, ?)');
+    const insertZone = db.prepare('INSERT INTO zones (id, coach_id, zone_name, zone_type, normal_min, normal_max, warning_threshold, critical_threshold, is_active, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?)');
+
+    const defaultZones = {
+      'Loco': [
+        { name: 'Traction Motor - Front', type: 'Traction', min: 30, max: custom_safe_max || 60, warn: custom_warning_max || 70, crit: custom_critical_max || 85 },
+        { name: 'Bogie Axle Box - Left', type: 'Bogie', min: 20, max: custom_safe_max || 60, warn: custom_warning_max || 70, crit: custom_critical_max || 85 }
+      ],
+      'AC-2': [
+        { name: 'AC Compressor Unit', type: 'HVAC', min: 20, max: 55, warn: custom_warning_max || 65, crit: custom_critical_max || 80 },
+        { name: 'Bogie Axle Box - Left', type: 'Bogie', min: 20, max: custom_safe_max || 60, warn: custom_warning_max || 70, crit: custom_critical_max || 85 }
+      ],
+      'AC-3': [
+        { name: 'AC Compressor Unit', type: 'HVAC', min: 20, max: 55, warn: custom_warning_max || 65, crit: custom_critical_max || 80 },
+        { name: 'Bogie Axle Box - Right', type: 'Bogie', min: 20, max: custom_safe_max || 60, warn: custom_warning_max || 70, crit: custom_critical_max || 85 }
+      ],
+      'Pantry': [
+        { name: 'Kitchen Exhaust', type: 'Ventilation', min: 20, max: 70, warn: custom_warning_max || 80, crit: custom_critical_max || 95 }
+      ],
+      'SL': [
+        { name: 'Lighting Panel', type: 'Electrical', min: 20, max: 50, warn: custom_warning_max || 60, crit: custom_critical_max || 75 },
+        { name: 'Bogie Axle Box - Left', type: 'Bogie', min: 20, max: custom_safe_max || 60, warn: custom_warning_max || 70, crit: custom_critical_max || 85 }
+      ],
+      'GEN': [
+        { name: 'Bogie Axle Box - Left', type: 'Bogie', min: 20, max: custom_safe_max || 60, warn: custom_warning_max || 70, crit: custom_critical_max || 85 }
+      ]
+    };
+
+    defaultCoaches.forEach((type, idx) => {
+      const coachId = uuidv4();
+      const coachNo = `${type === 'Loco' ? 'LOCO' : type.replace('-', '')}-${100 + idx}`;
+      insertCoach.run(coachId, id, coachNo, type, idx + 1, now);
+      
+      const zones = defaultZones[type] || [];
+      zones.forEach(z => {
+        insertZone.run(uuidv4(), coachId, z.name, z.type, z.min, z.max, z.warn, z.crit, now);
+      });
+    });
+
     res.status(201).json({ success: true, data: { id, train_number, train_name, route, division, frequency } });
   } catch (err) { next(err); }
 };

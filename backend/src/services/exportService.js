@@ -106,3 +106,101 @@ exports.generateExcelReport = async (stream, title, records) => {
 
   await workbook.xlsx.write(stream);
 };
+
+exports.generateSessionPdfReport = (stream, session, readings) => {
+  const doc = new PDFDocument({ margin: 40, size: 'A4' });
+  doc.pipe(stream);
+
+  // 1. Header Banner
+  doc.rect(0, 0, doc.page.width, 100).fill('#1e3a8a'); // Dark Blue banner
+  doc.fillColor('#ffffff').fontSize(20).text('INDIAN RAILWAYS', 40, 25, { bold: true, tracking: 1 });
+  doc.fontSize(11).text('Bogie Thermal Health & Compliance Portal', 40, 52);
+  doc.fontSize(9).text('AUTOMATED INSPECTION SERVICE REPORT', 40, 70);
+
+  // 2. Metadata Section (Zebra styled card)
+  doc.rect(40, 120, doc.page.width - 80, 85).fill('#f8fafc');
+  doc.rect(40, 120, doc.page.width - 80, 85).stroke('#e2e8f0');
+
+  doc.fillColor('#1e293b').fontSize(10).text('TRAIN DETAILS:', 50, 130, { bold: true });
+  doc.text(`Train Number: ${session.train_number}`, 50, 145);
+  doc.text(`Train Name: ${session.train_name}`, 50, 160);
+  doc.text(`Route: ${session.route || 'N/A'}`, 50, 175);
+
+  doc.text('INSPECTION METADATA:', doc.page.width - 240, 130, { bold: true });
+  doc.text(`Date: ${session.inspection_date}`, doc.page.width - 240, 145);
+  doc.text(`Status: ${session.status.toUpperCase()}`, doc.page.width - 240, 160, { bold: true });
+  doc.fillColor('#2563eb').text(`Completed by: ${session.inspector_name || 'Ground Engineer'}`, doc.page.width - 240, 175, { bold: true });
+
+  // 3. Readings Table
+  let y = 230;
+  doc.fillColor('#0f172a').fontSize(12).text('Bogie Temperature Readings Summary', 40, y, { bold: true });
+  y += 20;
+
+  // Table Headers
+  doc.rect(40, y, doc.page.width - 80, 24).fill('#475569');
+  doc.fillColor('#ffffff').fontSize(9);
+  doc.text('COACH', 50, y + 8, { bold: true });
+  doc.text('ZONE NAME', 140, y + 8, { bold: true });
+  doc.text('TYPE', 310, y + 8, { bold: true });
+  doc.text('TEMP (°C)', 400, y + 8, { bold: true });
+  doc.text('HEALTH STATUS', 480, y + 8, { bold: true });
+  y += 24;
+
+  readings.forEach((r, idx) => {
+    // Page break handling
+    if (y > doc.page.height - 60) {
+      doc.addPage();
+      y = 40;
+      doc.rect(40, y, doc.page.width - 80, 24).fill('#475569');
+      doc.fillColor('#ffffff').fontSize(9);
+      doc.text('COACH', 50, y + 8, { bold: true });
+      doc.text('ZONE NAME', 140, y + 8, { bold: true });
+      doc.text('TYPE', 310, y + 8, { bold: true });
+      doc.text('TEMP (°C)', 400, y + 8, { bold: true });
+      doc.text('HEALTH STATUS', 480, y + 8, { bold: true });
+      y += 24;
+    }
+
+    // Zebra striping background
+    if (idx % 2 === 1) {
+      doc.rect(40, y, doc.page.width - 80, 22).fill('#f1f5f9');
+    }
+
+    doc.fillColor('#334155').fontSize(9);
+    doc.text(String(r.coach_number), 50, y + 6);
+    doc.text(String(r.zone_name), 140, y + 6);
+    doc.text(String(r.zone_type), 310, y + 6);
+    doc.text(`${r.temperature.toFixed(1)}°C`, 400, y + 6, { bold: true });
+
+    // Colorful Status Pill representation
+    let statusColor = '#059669'; // Green (Safe)
+    let statusText = 'SAFE';
+    if (r.status === 'critical') {
+      statusColor = '#dc2626'; // Red (Critical)
+      statusText = 'CRITICAL BREACH';
+    } else if (r.status === 'warning') {
+      statusColor = '#d97706'; // Orange (Moderate)
+      statusText = 'MODERATE BREACH';
+    }
+
+    doc.fillColor(statusColor).text(statusText, 480, y + 6, { bold: true });
+    
+    // Draw row separator line
+    doc.strokeColor('#e2e8f0').lineWidth(0.5).moveTo(40, y + 22).lineTo(doc.page.width - 40, y + 22).stroke();
+    y += 22;
+  });
+
+  // Footer page numbering
+  const pages = doc.bufferedPageRange();
+  for (let i = 0; i < pages.count; i++) {
+    doc.switchToPage(i);
+    doc.fontSize(8).fillColor('#94a3b8').text(
+      `Page ${i + 1} of ${pages.count}  |  Indian Railways Bogie Inspection Service`,
+      40,
+      doc.page.height - 30,
+      { align: 'center' }
+    );
+  }
+
+  doc.end();
+};

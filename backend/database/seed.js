@@ -41,21 +41,30 @@ console.log('✅ Settings seeded');
 
 // ─── 2. USERS ───────────────────────────────────────────────────────────────
 const passwordHash = bcrypt.hashSync('Admin@123', 12);
+const branchHash = bcrypt.hashSync('Branch@123', 12);
+const supervisorHash = bcrypt.hashSync('Supervisor@123', 12);
 const inspectorHash = bcrypt.hashSync('Inspector@123', 12);
 
+const superAdminId = uuidv4();
+const branchAdminId = uuidv4();
+const supervisorId = uuidv4();
+const groundEngineerId = uuidv4();
+
 const users = [
-  { id: uuidv4(), name: 'Rajesh Kumar Sharma', email: 'admin@thermalportal.in', password_hash: passwordHash, role: 'admin', division: 'Mumbai', phone: '9876543210', employee_id: 'WR-ADM-001' },
-  { id: uuidv4(), name: 'Anil Mehta', email: 'anil.mehta@thermalportal.in', password_hash: passwordHash, role: 'admin', division: 'Mumbai', phone: '9876543211', employee_id: 'WR-ADM-002' },
-  { id: uuidv4(), name: 'Suresh Patil', email: 'suresh.patil@thermalportal.in', password_hash: inspectorHash, role: 'inspector', division: 'Mumbai', phone: '9876543212', employee_id: 'WR-INS-001' },
-  { id: uuidv4(), name: 'Ramesh Gupta', email: 'ramesh.gupta@thermalportal.in', password_hash: inspectorHash, role: 'inspector', division: 'Pune', phone: '9876543213', employee_id: 'WR-INS-002' },
-  { id: uuidv4(), name: 'Vijay Deshmukh', email: 'vijay.deshmukh@thermalportal.in', password_hash: inspectorHash, role: 'inspector', division: 'Nagpur', phone: '9876543214', employee_id: 'WR-INS-003' },
-  { id: uuidv4(), name: 'Priya Nair', email: 'priya.nair@thermalportal.in', password_hash: inspectorHash, role: 'inspector', division: 'Mumbai', phone: '9876543215', employee_id: 'WR-INS-004' },
-  { id: uuidv4(), name: 'Deepak Singh', email: 'deepak.singh@thermalportal.in', password_hash: inspectorHash, role: 'inspector', division: 'Surat', phone: '9876543216', employee_id: 'WR-INS-005' },
+  { id: superAdminId, name: 'Rajesh Kumar Sharma', email: 'admin@thermalportal.in', password_hash: passwordHash, role: 'super_admin', division: 'Mumbai', state: null, city: null, phone: '9876543210', employee_id: 'WR-ADM-001', parent_id: null },
+  { id: branchAdminId, name: 'Anil Mehta', email: 'anil.mehta@thermalportal.in', password_hash: branchHash, role: 'branch_admin', division: 'Mumbai', state: 'Maharashtra', city: 'Mumbai City', phone: '9876543211', employee_id: 'WR-BRN-001', parent_id: superAdminId },
+  { id: supervisorId, name: 'Priya Nair', email: 'priya.nair@thermalportal.in', password_hash: supervisorHash, role: 'supervisor', division: 'Mumbai', state: 'Maharashtra', city: 'Mumbai City', phone: '9876543215', employee_id: 'WR-SUP-001', parent_id: branchAdminId },
+  { id: groundEngineerId, name: 'Suresh Patil', email: 'suresh.patil@thermalportal.in', password_hash: inspectorHash, role: 'ground_engineer', division: 'Mumbai', state: 'Maharashtra', city: 'Mumbai City', phone: '9876543212', employee_id: 'WR-ENG-001', parent_id: supervisorId },
+  { id: uuidv4(), name: 'Vijay Deshmukh', email: 'vijay.deshmukh@thermalportal.in', password_hash: inspectorHash, role: 'ground_engineer', division: 'Mumbai', state: 'Maharashtra', city: 'Mumbai City', phone: '9876543214', employee_id: 'WR-ENG-002', parent_id: supervisorId }
 ];
 
-const insertUser = db.prepare(`INSERT OR IGNORE INTO users (id, name, email, password_hash, role, division, phone, employee_id, is_active, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)`);
-users.forEach(u => insertUser.run(u.id, u.name, u.email, u.password_hash, u.role, u.division, u.phone, u.employee_id, now, now));
-console.log('✅ Users seeded (admin: admin@thermalportal.in / Admin@123, inspector: suresh.patil@thermalportal.in / Inspector@123)');
+const insertUser = db.prepare(`INSERT OR IGNORE INTO users (id, name, email, password_hash, role, division, state, city, phone, employee_id, parent_id, is_active, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)`);
+users.forEach(u => insertUser.run(u.id, u.name, u.email, u.password_hash, u.role, u.division, u.state, u.city, u.phone, u.employee_id, u.parent_id, now, now));
+console.log('✅ Users seeded:');
+console.log('   - Super Admin: admin@thermalportal.in / Admin@123');
+console.log('   - Branch Admin: anil.mehta@thermalportal.in / Branch@123 (Maharashtra, Mumbai City)');
+console.log('   - Supervisor: priya.nair@thermalportal.in / Supervisor@123');
+console.log('   - Ground Eng: suresh.patil@thermalportal.in / Inspector@123');
 
 // ─── 3. TRAINS (Real Indian Railway trains) ─────────────────────────────────
 const trainData = [

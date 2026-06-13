@@ -10,10 +10,10 @@ router.use(authMiddleware());
 router.post('/change-password', usersController.changePassword);
 
 // Admin only routes
-router.get('/', authMiddleware('admin'), usersController.getAll);
-router.get('/:id', authMiddleware('admin'), usersController.getById);
-router.post('/', authMiddleware('admin'), auditMiddleware('CREATE_USER', 'user'), usersController.create);
-router.put('/:id', authMiddleware('admin'), auditMiddleware('UPDATE_USER', 'user'), usersController.update);
-router.delete('/:id', authMiddleware('admin'), auditMiddleware('DEACTIVATE_USER', 'user'), usersController.deactivate);
+router.get('/', authMiddleware(['super_admin', 'branch_admin', 'supervisor']), usersController.getAll);
+router.get('/:id', authMiddleware(['super_admin', 'branch_admin', 'supervisor']), usersController.getById);
+router.post('/', authMiddleware(['super_admin', 'branch_admin', 'supervisor']), auditMiddleware('CREATE_USER', 'user'), usersController.create);
+router.put('/:id', authMiddleware(['super_admin', 'branch_admin', 'supervisor']), auditMiddleware('UPDATE_USER', 'user'), usersController.update);
+router.delete('/:id', authMiddleware(['super_admin', 'branch_admin', 'supervisor']), auditMiddleware('DEACTIVATE_USER', 'user'), usersController.deactivate);
 
 module.exports = router;
