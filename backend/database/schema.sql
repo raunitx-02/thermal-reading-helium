@@ -89,6 +89,7 @@ CREATE TABLE IF NOT EXISTS thermal_readings (
   session_id TEXT NOT NULL REFERENCES inspection_sessions(id) ON DELETE CASCADE,
   zone_id TEXT NOT NULL REFERENCES zones(id),
   temperature REAL NOT NULL,
+  ambient_temperature REAL,
   status TEXT NOT NULL CHECK(status IN ('normal', 'warning', 'critical')) DEFAULT 'normal',
   notes TEXT,
   recorded_at INTEGER NOT NULL DEFAULT (unixepoch())

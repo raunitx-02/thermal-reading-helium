@@ -121,10 +121,10 @@ exports.generateSessionPdfReport = (stream, session, readings) => {
   doc.rect(40, 120, doc.page.width - 80, 85).fill('#f8fafc');
   doc.rect(40, 120, doc.page.width - 80, 85).stroke('#e2e8f0');
 
-  doc.fillColor('#1e293b').fontSize(10).text('TRAIN DETAILS:', 50, 130, { bold: true });
-  doc.text(`Train Number: ${session.train_number}`, 50, 145);
-  doc.text(`Train Name: ${session.train_name}`, 50, 160);
-  doc.text(`Route: ${session.route || 'N/A'}`, 50, 175);
+  doc.fillColor('#1e293b').fontSize(10).text('RAKE DETAILS:', 50, 130, { bold: true });
+  doc.text(`Rake Number: ${session.train_number}`, 50, 145);
+  doc.text(`Rake Type: ${session.train_name}`, 50, 160);
+  doc.text(`Division/Branch: ${session.route || 'N/A'}`, 50, 175);
 
   doc.text('INSPECTION METADATA:', doc.page.width - 240, 130, { bold: true });
   doc.text(`Date: ${session.inspection_date}`, doc.page.width - 240, 145);
@@ -133,17 +133,18 @@ exports.generateSessionPdfReport = (stream, session, readings) => {
 
   // 3. Readings Table
   let y = 230;
-  doc.fillColor('#0f172a').fontSize(12).text('Bogie Temperature Readings Summary', 40, y, { bold: true });
+  doc.fillColor('#0f172a').fontSize(12).text('Bogie Thermal Scanning Summary (RDSO Guidelines)', 40, y, { bold: true });
   y += 20;
 
   // Table Headers
   doc.rect(40, y, doc.page.width - 80, 24).fill('#475569');
   doc.fillColor('#ffffff').fontSize(9);
   doc.text('COACH', 50, y + 8, { bold: true });
-  doc.text('ZONE NAME', 140, y + 8, { bold: true });
-  doc.text('TYPE', 310, y + 8, { bold: true });
-  doc.text('TEMP (°C)', 400, y + 8, { bold: true });
-  doc.text('HEALTH STATUS', 480, y + 8, { bold: true });
+  doc.text('ZONE/COMPONENT', 110, y + 8, { bold: true });
+  doc.text('MAX (°C)', 270, y + 8, { bold: true });
+  doc.text('AMBIENT (°C)', 340, y + 8, { bold: true });
+  doc.text('RISE (°C)', 420, y + 8, { bold: true });
+  doc.text('RDSO STATUS', 485, y + 8, { bold: true });
   y += 24;
 
   readings.forEach((r, idx) => {
@@ -154,10 +155,11 @@ exports.generateSessionPdfReport = (stream, session, readings) => {
       doc.rect(40, y, doc.page.width - 80, 24).fill('#475569');
       doc.fillColor('#ffffff').fontSize(9);
       doc.text('COACH', 50, y + 8, { bold: true });
-      doc.text('ZONE NAME', 140, y + 8, { bold: true });
-      doc.text('TYPE', 310, y + 8, { bold: true });
-      doc.text('TEMP (°C)', 400, y + 8, { bold: true });
-      doc.text('HEALTH STATUS', 480, y + 8, { bold: true });
+      doc.text('ZONE/COMPONENT', 110, y + 8, { bold: true });
+      doc.text('MAX (°C)', 270, y + 8, { bold: true });
+      doc.text('AMBIENT (°C)', 340, y + 8, { bold: true });
+      doc.text('RISE (°C)', 420, y + 8, { bold: true });
+      doc.text('RDSO STATUS', 485, y + 8, { bold: true });
       y += 24;
     }
 
@@ -166,24 +168,26 @@ exports.generateSessionPdfReport = (stream, session, readings) => {
       doc.rect(40, y, doc.page.width - 80, 22).fill('#f1f5f9');
     }
 
+    const maxVal = r.temperature !== null ? r.temperature : 0;
+    const ambVal = r.ambient_temperature !== null ? r.ambient_temperature : 0;
+    const riseVal = maxVal - ambVal;
+
     doc.fillColor('#334155').fontSize(9);
     doc.text(String(r.coach_number), 50, y + 6);
-    doc.text(String(r.zone_name), 140, y + 6);
-    doc.text(String(r.zone_type), 310, y + 6);
-    doc.text(`${r.temperature.toFixed(1)}°C`, 400, y + 6, { bold: true });
+    doc.text(String(r.zone_name), 110, y + 6);
+    doc.text(`${maxVal.toFixed(1)}°C`, 270, y + 6);
+    doc.text(`${ambVal.toFixed(1)}°C`, 340, y + 6);
+    doc.text(`${riseVal.toFixed(1)}°C`, 420, y + 6, { bold: riseVal > 25.0 });
 
     // Colorful Status Pill representation
     let statusColor = '#059669'; // Green (Safe)
-    let statusText = 'SAFE';
+    let statusText = 'ACCEPTABLE';
     if (r.status === 'critical') {
       statusColor = '#dc2626'; // Red (Critical)
-      statusText = 'CRITICAL BREACH';
-    } else if (r.status === 'warning') {
-      statusColor = '#d97706'; // Orange (Moderate)
-      statusText = 'MODERATE BREACH';
+      statusText = 'INVESTIGATE';
     }
 
-    doc.fillColor(statusColor).text(statusText, 480, y + 6, { bold: true });
+    doc.fillColor(statusColor).text(statusText, 485, y + 6, { bold: true });
     
     // Draw row separator line
     doc.strokeColor('#e2e8f0').lineWidth(0.5).moveTo(40, y + 22).lineTo(doc.page.width - 40, y + 22).stroke();

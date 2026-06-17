@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../../api';
-import { Save, Lock, ArrowLeft, ShieldCheck, RefreshCw } from 'lucide-react';
+import { Save, Lock, ArrowLeft, ShieldCheck, RefreshCw, AlertTriangle, CheckCircle } from 'lucide-react';
 
 export default function InspectionFlow() {
   const { sessionId } = useParams();
@@ -13,6 +13,7 @@ export default function InspectionFlow() {
   // Progress tracker
   const [currentIdx, setCurrentIdx] = useState(0); // Index of current zone to inspect
   const [tempInput, setTempInput] = useState('');
+  const [ambientInput, setAmbientInput] = useState('');
   const [noteInput, setNoteInput] = useState('');
   
   // Submit state
@@ -43,16 +44,29 @@ export default function InspectionFlow() {
 
   const currentZone = readings[currentIdx];
 
+  // Sync inputs on zone index change
+  useEffect(() => {
+    if (currentZone) {
+      setTempInput(currentZone.temperature !== null && currentZone.temperature !== undefined ? String(currentZone.temperature) : '');
+      setNoteInput(currentZone.notes || '');
+      if (currentZone.ambient_temperature !== null && currentZone.ambient_temperature !== undefined) {
+        setAmbientInput(String(currentZone.ambient_temperature));
+      }
+    }
+  }, [currentIdx, readings]);
+
   const handleSaveReading = async (e) => {
     if (e) e.preventDefault();
-    if (!tempInput || isNaN(tempInput)) return;
+    if (!tempInput || isNaN(tempInput) || !ambientInput || isNaN(ambientInput)) return;
     
     try {
       const tempNum = parseFloat(tempInput);
+      const ambNum = parseFloat(ambientInput);
       const res = await api.post('/sessions/reading', {
         session_id: sessionId,
         zone_id: currentZone.zone_id,
         temperature: tempNum,
+        ambient_temperature: ambNum,
         notes: noteInput
       });
 
@@ -61,6 +75,7 @@ export default function InspectionFlow() {
         setReadings(prev => prev.map((r, idx) => idx === currentIdx ? {
           ...r,
           temperature: tempNum,
+          ambient_temperature: ambNum,
           status: res.data.data.status,
           notes: noteInput
         } : r));
@@ -91,7 +106,7 @@ export default function InspectionFlow() {
     try {
       const res = await api.post(`/sessions/${sessionId}/submit`, { remarks });
       if (res.data.success) {
-        alert('Inspection logs locked and submitted successfully.');
+        alert('Rake inspection logs locked and submitted successfully.');
         navigate('/ground-engineer/dashboard');
       }
     } catch (_) {}
@@ -110,6 +125,11 @@ export default function InspectionFlow() {
     ? Math.round((readings.filter(r => r.temperature !== null).length / readings.length) * 100)
     : 0;
 
+  // Real-time calculation of rise
+  const computedRise = (tempInput && ambientInput && !isNaN(tempInput) && !isNaN(ambientInput))
+    ? (parseFloat(tempInput) - parseFloat(ambientInput)).toFixed(1)
+    : null;
+
   return (
     <div className="p-6 md:p-8 space-y-6 max-w-4xl">
       <div className="flex items-center gap-3 border-b border-slate-200 pb-4">
@@ -117,8 +137,8 @@ export default function InspectionFlow() {
           <ArrowLeft className="w-4 h-4" />
         </button>
         <div>
-          <h1 className="text-xl font-bold text-slate-900 font-sans">Zone Diagnostics Checklist</h1>
-          <p className="text-xs text-slate-500 mt-0.5 font-semibold">{session?.train_number} - {session?.train_name} ({session?.inspection_date})</p>
+          <h1 className="text-xl font-bold text-slate-900 font-sans">Bogie & Switchgear Diagnostics</h1>
+          <p className="text-xs text-slate-500 mt-0.5 font-semibold">Rake: {session?.train_number} - Type: {session?.train_name} ({session?.inspection_date})</p>
         </div>
       </div>
 
@@ -141,53 +161,85 @@ export default function InspectionFlow() {
               <div className="border-b border-slate-100 pb-3 flex justify-between items-center">
                 <div>
                   <span className="text-[10px] bg-blue-50 border border-blue-100 text-blue-600 px-2 py-0.5 rounded uppercase font-bold">
-                    Coach: {currentZone.coach_number} ({currentZone.coach_type})
+                    Coach: {currentZone.coach_number}
                   </span>
-                  <h3 className="font-bold text-base text-slate-905 text-slate-900 mt-2">{currentZone.zone_name}</h3>
-                  <p className="text-xs text-slate-500 capitalize font-medium">{currentZone.zone_type} Zone</p>
+                  <h3 className="font-bold text-base text-slate-900 mt-2">{currentZone.zone_name}</h3>
+                  <p className="text-xs text-slate-500 capitalize font-medium">{currentZone.zone_type} Component</p>
                 </div>
                 <div className="text-right text-xs">
-                  <span className="text-slate-400 block font-semibold">Current Step</span>
+                  <span className="text-slate-400 block font-semibold">Step</span>
                   <span className="text-slate-900 font-black">{currentIdx + 1} / {readings.length}</span>
                 </div>
               </div>
 
-              {/* Threshold limits helper info */}
-              <div className="grid grid-cols-3 gap-3 bg-slate-50 border border-slate-100 rounded-lg p-3 text-center text-xs">
-                <div>
-                  <span className="text-slate-500 block text-[9px] uppercase font-bold">Normal Range</span>
-                  <span className="text-slate-700 font-semibold">{currentZone.normal_min}°C - {currentZone.normal_max}°C</span>
-                </div>
-                <div>
-                  <span className="text-orange-605 text-orange-600 block text-[9px] uppercase font-bold">Warning Level</span>
-                  <span className="text-orange-500 font-semibold">&gt;= {currentZone.warning_threshold}°C</span>
-                </div>
-                <div>
-                  <span className="text-red-650 text-red-650 text-red-600 block text-[9px] uppercase font-bold">Critical Level</span>
-                  <span className="text-red-500 font-semibold">&gt;= {currentZone.critical_threshold}°C</span>
-                </div>
+              {/* RDSO Acceptance Rules */}
+              <div className="bg-slate-50 border border-slate-150 rounded-lg p-3.5 text-xs space-y-1">
+                <p className="font-bold text-slate-700">RDSO Scanning acceptance rules:</p>
+                <p className="text-slate-500 text-[11px] leading-relaxed">
+                  Acceptance is based on the <strong>Temperature Rise</strong> above ambient:
+                  <br />
+                  • Temp Rise &le; 25°C $\rightarrow$ <strong>Acceptable</strong>
+                  <br />
+                  • Temp Rise &gt; 25°C $\rightarrow$ <strong>Action/Investigation Required</strong>
+                </p>
               </div>
 
               <form onSubmit={handleSaveReading} className="space-y-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-505 text-slate-500 uppercase mb-2">Record Temperature (°C)</label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    required
-                    autoFocus
-                    placeholder="e.g. 45.5"
-                    value={tempInput}
-                    onChange={(e) => setTempInput(e.target.value)}
-                    className="w-full bg-white border border-slate-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 rounded-lg py-3 px-4 text-base font-bold text-slate-900 focus:outline-none"
-                  />
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-500 uppercase mb-2">Ambient Temp (°C)</label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      required
+                      placeholder="e.g. 32.0"
+                      value={ambientInput}
+                      onChange={(e) => setAmbientInput(e.target.value)}
+                      className="w-full bg-white border border-slate-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 rounded-lg py-3 px-4 text-base font-bold text-slate-900 focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-500 uppercase mb-2">Max Recorded Temp (°C)</label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      required
+                      autoFocus
+                      placeholder="e.g. 48.0"
+                      value={tempInput}
+                      onChange={(e) => setTempInput(e.target.value)}
+                      className="w-full bg-white border border-slate-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 rounded-lg py-3 px-4 text-base font-bold text-slate-900 focus:outline-none"
+                    />
+                  </div>
                 </div>
 
+                {/* Real-time Computed Rise Summary */}
+                {computedRise !== null && (
+                  <div className={`p-3 rounded-lg border text-xs flex items-center gap-2 ${
+                    parseFloat(computedRise) > 25.0
+                      ? 'bg-red-50 border-red-200 text-red-700'
+                      : 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                  }`}>
+                    {parseFloat(computedRise) > 25.0 ? (
+                      <>
+                        <AlertTriangle className="w-4 h-4 text-red-600 shrink-0" />
+                        <span><strong>Warning:</strong> Temperature Rise is <strong>{computedRise}°C</strong>, which exceeds the 25°C limit (Critical Breach).</span>
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
+                        <span>Temperature Rise is <strong>{computedRise}°C</strong> (Acceptable).</span>
+                      </>
+                    )}
+                  </div>
+                )}
+
                 <div>
-                  <label className="block text-xs font-semibold text-slate-505 text-slate-500 uppercase mb-2">Sensor Notes / Observation (Optional)</label>
+                  <label className="block text-xs font-semibold text-slate-500 uppercase mb-2">Sensor Notes / Observation (Optional)</label>
                   <input
                     type="text"
-                    placeholder="e.g. slight dust build-up"
+                    placeholder="e.g. normal operation"
                     value={noteInput}
                     onChange={(e) => setNoteInput(e.target.value)}
                     className="w-full bg-white border border-slate-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 rounded-lg py-2.5 px-4 text-xs text-slate-900 focus:outline-none"
@@ -199,9 +251,9 @@ export default function InspectionFlow() {
                     type="button"
                     disabled={currentIdx === 0}
                     onClick={() => setCurrentIdx(prev => prev - 1)}
-                    className="px-4 py-2 border border-slate-200 text-xs text-slate-550 text-slate-600 hover:bg-slate-50 rounded-lg transition disabled:opacity-40 shadow-sm"
+                    className="px-4 py-2 border border-slate-200 text-xs text-slate-600 hover:bg-slate-50 rounded-lg transition disabled:opacity-40 shadow-sm"
                   >
-                    Previous Zone
+                    Previous Component
                   </button>
                   <button
                     type="submit"
@@ -213,14 +265,14 @@ export default function InspectionFlow() {
               </form>
 
               {message && (
-                <p className="text-[10px] text-emerald-600 flex items-center gap-1 font-semibold">
+                <p className="text-[10px] text-emerald-600 flex items-center gap-1 font-semibold animate-pulse">
                   <ShieldCheck className="w-3.5 h-3.5" /> {message}
                 </p>
               )}
             </div>
           ) : (
             <div className="bg-white border border-slate-200 rounded-xl p-6 text-center text-slate-400 text-xs py-12 shadow-sm font-semibold">
-              No zones configured for this train.
+              No zones configured for this Rake.
             </div>
           )}
 
@@ -231,16 +283,16 @@ export default function InspectionFlow() {
                 <ShieldCheck className="w-5 h-5 text-emerald-600" /> Complete Submissions
               </h3>
               <p className="text-xs text-slate-500 font-medium">
-                All sensor diagnostic temperatures have been logged. Lock and finalize the logs. Once finalized, logs are sealed.
+                All sensor diagnostic temperatures and ambient values have been logged. Finalize the logs.
               </p>
               <form onSubmit={handleSubmitSession} className="space-y-4">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Shift In-charge General Remarks</label>
+                  <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">General Remarks</label>
                   <textarea
                     rows={2}
                     value={remarks}
                     onChange={(e) => setRemarks(e.target.value)}
-                    placeholder="All systems check completed. No critical breaches found."
+                    placeholder="All scan criteria completed. Acceptable values found."
                     className="w-full bg-white border border-slate-200 rounded-lg p-2.5 text-xs text-slate-900 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20"
                   />
                 </div>
@@ -258,33 +310,46 @@ export default function InspectionFlow() {
 
         {/* Right Side: Sidebar listing of coach-zones status */}
         <div className="bg-white border border-slate-200 rounded-xl p-5 space-y-4 max-h-[70vh] overflow-y-auto pr-1 shadow-sm">
-          <h3 className="font-semibold text-xs text-slate-655 text-slate-600 uppercase tracking-wider border-b border-slate-100 pb-2.5">
-            Logs Checklist
+          <h3 className="font-semibold text-xs text-slate-605 text-slate-500 uppercase tracking-wider border-b border-slate-100 pb-2.5">
+            Component Checklist
           </h3>
           <div className="space-y-2">
-            {readings.map((r, idx) => (
-              <div
-                key={r.id || idx}
-                onClick={() => setCurrentIdx(idx)}
-                className={`p-2.5 rounded-lg border text-xs cursor-pointer transition flex justify-between items-center ${
-                  idx === currentIdx
-                    ? 'bg-blue-50 border-blue-500 text-blue-600 font-bold'
-                    : r.temperature !== null
-                    ? 'bg-slate-50 border-slate-200 text-slate-700'
-                    : 'bg-white border-slate-100 text-slate-400'
-                }`}
-              >
-                <div>
-                  <p className="font-semibold truncate max-w-[120px]">{r.zone_name}</p>
-                  <span className="text-[9px] text-slate-450 uppercase mt-0.5 block font-semibold">{r.coach_number}</span>
+            {readings.map((r, idx) => {
+              const hasVal = r.temperature !== null && r.ambient_temperature !== null;
+              const rise = hasVal ? r.temperature - r.ambient_temperature : null;
+              const isCrit = rise !== null && rise > 25.0;
+
+              return (
+                <div
+                  key={r.id || idx}
+                  onClick={() => setCurrentIdx(idx)}
+                  className={`p-2.5 rounded-lg border text-xs cursor-pointer transition flex justify-between items-center ${
+                    idx === currentIdx
+                      ? 'bg-blue-50 border-blue-500 text-blue-600 font-bold'
+                      : hasVal
+                      ? 'bg-slate-50 border-slate-200 text-slate-700'
+                      : 'bg-white border-slate-100 text-slate-400'
+                  }`}
+                >
+                  <div>
+                    <p className="font-semibold truncate max-w-[120px]">{r.zone_name}</p>
+                    <span className="text-[9px] text-slate-400 uppercase mt-0.5 block font-semibold">{r.coach_number}</span>
+                  </div>
+                  <div className="text-right font-mono text-[10px]">
+                    {hasVal ? (
+                      <>
+                        <span className={`block font-bold ${isCrit ? 'text-red-600' : 'text-emerald-600'}`}>
+                          Rise: {rise.toFixed(1)}°C
+                        </span>
+                        <span className="text-slate-400 block text-[8px]">Max: {r.temperature}°C</span>
+                      </>
+                    ) : (
+                      <span className="text-slate-400">--</span>
+                    )}
+                  </div>
                 </div>
-                <span className={`font-mono font-bold ${
-                  r.status === 'critical' ? 'text-red-605 text-red-600' : r.status === 'warning' ? 'text-orange-600' : 'text-slate-500'
-                }`}>
-                  {r.temperature !== null ? `${r.temperature}°C` : '--'}
-                </span>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </div>

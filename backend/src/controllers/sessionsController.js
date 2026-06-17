@@ -92,9 +92,9 @@ exports.createSession = (req, res, next) => {
 
 exports.saveReading = (req, res, next) => {
   try {
-    const { session_id, zone_id, temperature, notes } = req.body;
-    if (!session_id || !zone_id || temperature === undefined) {
-      return res.status(400).json({ success: false, message: 'session_id, zone_id, and temperature required' });
+    const { session_id, zone_id, temperature, ambient_temperature, notes } = req.body;
+    if (!session_id || !zone_id || temperature === undefined || ambient_temperature === undefined) {
+      return res.status(400).json({ success: false, message: 'session_id, zone_id, temperature, and ambient_temperature required' });
     }
     
     const db = getDb();
@@ -111,11 +111,10 @@ exports.saveReading = (req, res, next) => {
     `).get(zone_id);
     if (!zone) return res.status(404).json({ success: false, message: 'Zone not found' });
     
+    const rise = parseFloat(temperature) - parseFloat(ambient_temperature);
     let status = 'normal';
-    if (temperature >= zone.critical_threshold) {
+    if (rise > 25.0) {
       status = 'critical';
-    } else if (temperature >= zone.warning_threshold) {
-      status = 'warning';
     }
     
     const now = Math.floor(Date.now() / 1000);
@@ -127,20 +126,20 @@ exports.saveReading = (req, res, next) => {
     if (existing) {
       db.prepare(`
         UPDATE thermal_readings 
-        SET temperature = ?, status = ?, notes = ?, recorded_at = ?
+        SET temperature = ?, ambient_temperature = ?, status = ?, notes = ?, recorded_at = ?
         WHERE id = ?
-      `).run(temperature, status, notes || null, now, readingId);
+      `).run(temperature, ambient_temperature, status, notes || null, now, readingId);
     } else {
       db.prepare(`
-        INSERT INTO thermal_readings (id, session_id, zone_id, temperature, status, notes, recorded_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-      `).run(readingId, session_id, zone_id, temperature, status, notes || null, now);
+        INSERT INTO thermal_readings (id, session_id, zone_id, temperature, ambient_temperature, status, notes, recorded_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(readingId, session_id, zone_id, temperature, ambient_temperature, status, notes || null, now);
     }
     
     // Update session timestamp
     db.prepare('UPDATE inspection_sessions SET updated_at = ? WHERE id = ?').run(now, session_id);
     
-    // Handle Alert Generation (only insert alert if it's warning or critical, and not already reported)
+    // Handle Alert Generation (only insert alert if status is critical, and not already reported)
     if (status !== 'normal') {
       const existingAlert = db.prepare('SELECT id FROM alerts WHERE reading_id = ?').get(readingId);
       if (!existingAlert) {
@@ -152,12 +151,12 @@ exports.saveReading = (req, res, next) => {
         
         // Push in-app notification to all admins
         const admins = db.prepare("SELECT id FROM users WHERE role IN ('super_admin', 'branch_admin')").all();
-        const msg = `Alert! ${zone.train_number} coach ${zone.coach_number} zone "${zone.zone_name}" recorded high temperature: ${temperature}°C (${status.toUpperCase()})`;
+        const msg = `Alert! ${zone.train_number} coach ${zone.coach_number} zone "${zone.zone_name}" recorded high temperature rise: ${rise.toFixed(1)}°C (Max: ${temperature}°C, Ambient: ${ambient_temperature}°C)`;
         admins.forEach(admin => {
           db.prepare(`
             INSERT INTO notifications (id, user_id, type, title, message, link, is_read, created_at)
             VALUES (?, ?, 'alert', ?, ?, ?, 0, ?)
-          `).run(uuidv4(), admin.id, `Critical Threshold Breach`, msg, `/admin/alerts`, now);
+          `).run(uuidv4(), admin.id, `Critical Temperature Rise Breach`, msg, `/admin/alerts`, now);
         });
         
         // Trigger Email Notification (Asynchronous)
@@ -168,7 +167,7 @@ exports.saveReading = (req, res, next) => {
       db.prepare('DELETE FROM alerts WHERE reading_id = ? AND is_acknowledged = 0').run(readingId);
     }
     
-    res.json({ success: true, data: { id: readingId, status, temperature } });
+    res.json({ success: true, data: { id: readingId, status, temperature, ambient_temperature } });
   } catch (err) { next(err); }
 };
 

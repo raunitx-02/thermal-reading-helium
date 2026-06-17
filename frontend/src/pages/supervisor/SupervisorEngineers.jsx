@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../api';
 import { useAuth } from '../../contexts/AuthContext';
+import { useModal } from '../../contexts/ModalContext';
 import { Users, UserPlus, RefreshCw, Trash2, Edit, Search } from 'lucide-react';
 
 export default function SupervisorEngineers() {
   const { user } = useAuth();
+  const { showAlert, showConfirm } = useModal();
   const [engineers, setEngineers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -17,7 +19,6 @@ export default function SupervisorEngineers() {
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
-  const [employeeId, setEmployeeId] = useState('');
 
   const fetchEngineers = async () => {
     setLoading(true);
@@ -37,7 +38,7 @@ export default function SupervisorEngineers() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!firstName || !lastName || !email || (!editingEngineer && !password)) {
-      alert('Please fill out all required fields');
+      showAlert('Required Fields', 'Please fill out all required fields', 'warning');
       return;
     }
 
@@ -50,10 +51,10 @@ export default function SupervisorEngineers() {
           email,
           password: password || undefined,
           phone,
-          employee_id: employeeId
+          employee_id: null
         });
         if (res.data.success) {
-          alert('Ground Engineer updated successfully');
+          showAlert('Success', 'Ground Engineer updated successfully', 'success');
           setShowModal(false);
           fetchEngineers();
         }
@@ -65,17 +66,17 @@ export default function SupervisorEngineers() {
           role: 'ground_engineer',
           division: user.division,
           phone,
-          employee_id: employeeId,
+          employee_id: null,
           parent_id: user.id
         });
         if (res.data.success) {
-          alert('Ground Engineer added successfully');
+          showAlert('Success', 'Ground Engineer added successfully', 'success');
           setShowModal(false);
           fetchEngineers();
         }
       }
     } catch (err) {
-      alert(err.response?.data?.message || 'Action failed');
+      showAlert('Error', err.response?.data?.message || 'Action failed', 'error');
     }
   };
 
@@ -87,7 +88,6 @@ export default function SupervisorEngineers() {
     setEmail(eng.email);
     setPassword('');
     setPhone(eng.phone || '');
-    setEmployeeId(eng.employee_id || '');
     setShowModal(true);
   };
 
@@ -98,16 +98,22 @@ export default function SupervisorEngineers() {
     setEmail('');
     setPassword('');
     setPhone('');
-    setEmployeeId('');
     setShowModal(true);
   };
 
   const handleDeactivate = async (id) => {
-    if (!window.confirm('Are you sure you want to deactivate this Ground Engineer?')) return;
+    const confirmed = await showConfirm(
+      'Confirm Action',
+      'Are you sure you want to deactivate this Ground Engineer?',
+      'warning',
+      'Yes, Deactivate',
+      'Cancel'
+    );
+    if (!confirmed) return;
     try {
       const res = await api.delete(`/users/${id}`);
       if (res.data.success) {
-        alert('Ground Engineer deactivated');
+        showAlert('Success', 'Ground Engineer deactivated', 'success');
         fetchEngineers();
       }
     } catch (_) {}
@@ -115,8 +121,7 @@ export default function SupervisorEngineers() {
 
   const filtered = engineers.filter(e => 
     e.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    e.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    e.employee_id?.toLowerCase().includes(searchTerm.toLowerCase())
+    e.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -165,7 +170,6 @@ export default function SupervisorEngineers() {
                   <th className="p-4">Name</th>
                   <th className="p-4">Email ID</th>
                   <th className="p-4">Mobile Number</th>
-                  <th className="p-4">Employee ID</th>
                   <th className="p-4 text-center">Status</th>
                   <th className="p-4 text-center">Actions</th>
                 </tr>
@@ -176,9 +180,8 @@ export default function SupervisorEngineers() {
                     <td className="p-4 font-bold text-slate-900">{eng.name}</td>
                     <td className="p-4 font-mono">{eng.email}</td>
                     <td className="p-4 text-slate-500">{eng.phone || 'N/A'}</td>
-                    <td className="p-4 font-semibold text-slate-650">{eng.employee_id || 'N/A'}</td>
                     <td className="p-4 text-center">
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${eng.is_active ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-red-50 text-red-600 border border-red-100'}`}>
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${eng.is_active ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-red-50 text-red-650 border border-red-100'}`}>
                         {eng.is_active ? 'Active' : 'Inactive'}
                       </span>
                     </td>
@@ -250,17 +253,6 @@ export default function SupervisorEngineers() {
                   placeholder="10 digit number"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
-                  className="w-full border border-slate-200 rounded-lg p-2.5 text-xs focus:outline-none focus:border-blue-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Employee ID</label>
-                <input
-                  type="text"
-                  placeholder="E.g. IR-ENG-88"
-                  value={employeeId}
-                  onChange={(e) => setEmployeeId(e.target.value)}
                   className="w-full border border-slate-200 rounded-lg p-2.5 text-xs focus:outline-none focus:border-blue-500"
                 />
               </div>

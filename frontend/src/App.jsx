@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { ModalProvider } from './contexts/ModalContext';
 import Sidebar from './components/Sidebar';
 
 // Pages
@@ -53,41 +54,44 @@ const ProtectedRoute = ({ allowedRoles }) => {
 export default function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
-        <Routes>
-          {/* Public Routes */}
-          <Route path="/login" element={<Login />} />
-          <Route path="/forgot-password" element={<ForgotPassword />} />
+      <ModalProvider>
+        <BrowserRouter>
+          <Routes>
+            {/* Public Routes */}
+            <Route path="/login" element={<Login />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
 
-          {/* Super Admin Protected Routes */}
-          <Route element={<ProtectedRoute allowedRoles={['super_admin']} />}>
-            <Route path="/super-admin/dashboard" element={<SuperAdminDashboard />} />
-          </Route>
+            {/* Super Admin Protected Routes */}
+            <Route element={<ProtectedRoute allowedRoles={['super_admin']} />}>
+              <Route path="/super-admin/dashboard" element={<SuperAdminDashboard />} />
+            </Route>
 
-          {/* Branch Admin Protected Routes */}
-          <Route element={<ProtectedRoute allowedRoles={['branch_admin']} />}>
-            <Route path="/branch-admin/dashboard" element={<BranchAdminDashboard />} />
-            <Route path="/branch-admin/trains" element={<BranchTrainsManager />} />
-          </Route>
+            {/* Branch Admin Protected Routes */}
+            <Route element={<ProtectedRoute allowedRoles={['branch_admin']} />}>
+              <Route path="/branch-admin/dashboard" element={<BranchAdminDashboard />} />
+              <Route path="/branch-admin/trains" element={<BranchTrainsManager />} />
+            </Route>
 
-          {/* Supervisor Protected Routes */}
-          <Route element={<ProtectedRoute allowedRoles={['supervisor']} />}>
-            <Route path="/supervisor/dashboard" element={<SupervisorDashboard />} />
-            <Route path="/supervisor/ground-engineers" element={<SupervisorEngineers />} />
-            <Route path="/supervisor/assignments" element={<SupervisorAssignments />} />
-          </Route>
+            {/* Supervisor Protected Routes */}
+            <Route element={<ProtectedRoute allowedRoles={['supervisor']} />}>
+              <Route path="/supervisor/dashboard" element={<SupervisorDashboard />} />
+              <Route path="/supervisor/ground-engineers" element={<SupervisorEngineers />} />
+              <Route path="/supervisor/assignments" element={<SupervisorAssignments />} />
+              <Route path="/supervisor/trains" element={<BranchTrainsManager />} />
+            </Route>
 
-          {/* Ground Engineer Protected Routes */}
-          <Route element={<ProtectedRoute allowedRoles={['ground_engineer']} />}>
-            <Route path="/ground-engineer/dashboard" element={<EngineerDashboard />} />
-            <Route path="/ground-engineer/history" element={<EngineerHistory />} />
-            <Route path="/ground-engineer/inspection/:sessionId" element={<InspectionFlow />} />
-          </Route>
+            {/* Ground Engineer Protected Routes */}
+            <Route element={<ProtectedRoute allowedRoles={['ground_engineer']} />}>
+              <Route path="/ground-engineer/dashboard" element={<EngineerDashboard />} />
+              <Route path="/ground-engineer/history" element={<EngineerHistory />} />
+              <Route path="/ground-engineer/inspection/:sessionId" element={<InspectionFlow />} />
+            </Route>
 
-          {/* Default Route */}
-          <Route path="*" element={<Navigate to="/login" replace />} />
-        </Routes>
-      </BrowserRouter>
+            {/* Default Route */}
+            <Route path="*" element={<Navigate to="/login" replace />} />
+          </Routes>
+        </BrowserRouter>
+      </ModalProvider>
     </AuthProvider>
   );
 }

@@ -1,18 +1,77 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../../api';
 import { useAuth } from '../../contexts/AuthContext';
-import { Users, FileText, CheckSquare, Calendar, Download, RefreshCw, Eye, Search } from 'lucide-react';
+import { useModal } from '../../contexts/ModalContext';
+import { Users, FileText, CheckSquare, Calendar, Download, RefreshCw, Eye, Search, Bell, LogOut, ChevronLeft, ChevronRight, X } from 'lucide-react';
 
 export default function SupervisorDashboard() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+  const { showConfirm } = useModal();
   const [engineers, setEngineers] = useState([]);
   const [trains, setTrains] = useState([]);
   const [inspections, setInspections] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // Time filter state
-  const [timeFilter, setTimeFilter] = useState('today'); // 'today', 'weekly', 'monthly', 'all'
+  const [timeFilter, setTimeFilter] = useState('today'); // 'today', 'weekly', 'monthly', 'custom'
   const [searchTerm, setSearchTerm] = useState('');
+  
+  // Custom Calendar state
+  const [showCalendar, setShowCalendar] = useState(false);
+  const [calendarMonth, setCalendarMonth] = useState(new Date());
+  const [selectedCustomDate, setSelectedCustomDate] = useState('');
+
+  // Notifications state
+  const [notifications, setNotifications] = useState([]);
+  const [showNotif, setShowNotif] = useState(false);
+
+  useEffect(() => {
+    if (!showNotif) return;
+    const handleOutsideClick = (e) => {
+      if (!e.target.closest('.notif-container')) {
+        setShowNotif(false);
+      }
+    };
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, [showNotif]);
+
+  const fetchNotifs = async () => {
+    try {
+      const res = await api.get('/notifications');
+      if (res.data.success) setNotifications(res.data.data);
+    } catch (_) {}
+  };
+
+  useEffect(() => {
+    fetchNotifs();
+    const interval = setInterval(fetchNotifs, 15000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const unreadCount = notifications.filter(n => !n.is_read).length;
+
+  const handleMarkRead = async () => {
+    try {
+      await api.put('/notifications/read-all');
+      setNotifications(prev => prev.map(n => ({ ...n, is_read: 1 })));
+    } catch (_) {}
+  };
+
+  const handleLogout = async () => {
+    const confirmed = await showConfirm(
+      'Confirm Logout',
+      'Are you sure you want to log out of the system?',
+      'confirm',
+      'Yes, Logout',
+      'Cancel'
+    );
+    if (!confirmed) return;
+    await logout();
+    navigate('/login');
+  };
 
   const fetchSupervisorData = async () => {
     setLoading(true);
@@ -56,8 +115,10 @@ export default function SupervisorDashboard() {
       } else if (timeFilter === 'monthly') {
         const diff = (now - date) / (1000 * 3600 * 24);
         return diff <= 30;
+      } else if (timeFilter === 'custom') {
+        return i.inspection_date === selectedCustomDate;
       }
-      return true; // all time
+      return true;
     });
   };
 
@@ -90,9 +151,9 @@ export default function SupervisorDashboard() {
           <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Supervisor Dashboard</h1>
           <p className="text-slate-500 text-sm mt-1">Track daily inspections, download colourful PDF reports, and supervise ground activities</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 relative">
           <div className="bg-white border border-slate-200 rounded-lg p-1 flex gap-1 shadow-sm">
-            {['today', 'weekly', 'monthly', 'all'].map((filter) => (
+            {['today', 'weekly', 'monthly'].map((filter) => (
               <button
                 key={filter}
                 onClick={() => setTimeFilter(filter)}
@@ -101,9 +162,66 @@ export default function SupervisorDashboard() {
                 {filter}
               </button>
             ))}
+            <button
+              onClick={() => setShowCalendar(true)}
+              className={`px-3 py-1.5 rounded-md text-xs font-semibold uppercase tracking-wider transition flex items-center gap-1 ${timeFilter === 'custom' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-900'}`}
+            >
+              <span>{timeFilter === 'custom' ? selectedCustomDate : 'Custom Date'}</span>
+              <Calendar className="w-3.5 h-3.5" />
+            </button>
           </div>
-          <button onClick={fetchSupervisorData} className="p-2.5 bg-white border border-slate-200 text-slate-650 hover:text-slate-900 rounded-lg transition shadow-sm">
+          <button onClick={fetchSupervisorData} className="p-2.5 bg-white border border-slate-200 text-slate-650 hover:text-slate-900 rounded-lg transition shadow-sm" title="Refresh List">
             <RefreshCw className="w-4 h-4" />
+          </button>
+
+          {/* Notification Bell */}
+          <div className="relative notif-container">
+            <button
+              onClick={() => {
+                setShowNotif(!showNotif);
+                if (!showNotif) handleMarkRead();
+              }}
+              className={`p-2.5 border border-slate-200 text-slate-500 hover:text-slate-900 hover:bg-slate-50 rounded-lg transition relative shadow-sm ${showNotif ? 'bg-slate-100' : 'bg-white'}`}
+              title="Notifications"
+            >
+              <Bell className="w-4 h-4" />
+              {unreadCount > 0 && (
+                <span className="absolute top-1 right-1 w-1.5 h-1.5 bg-red-600 rounded-full" />
+              )}
+            </button>
+
+            {showNotif && (
+              <div className="absolute right-0 mt-2 w-80 bg-white border border-slate-200 rounded-xl shadow-xl p-4 max-h-80 overflow-y-auto z-50">
+                <h3 className="font-semibold text-xs text-slate-900 border-b border-slate-100 pb-2 mb-2 flex justify-between items-center">
+                  <span>Notifications</span>
+                  <button onClick={() => setShowNotif(false)} className="text-slate-455 hover:text-slate-950">✕</button>
+                </h3>
+                {notifications.length === 0 ? (
+                  <p className="text-[10px] text-slate-400 text-center py-4">No recent notifications</p>
+                ) : (
+                  <div className="space-y-2.5">
+                    {notifications.map(n => (
+                      <div key={n.id} className={`p-2 rounded-lg text-[10px] border ${n.is_read ? 'opacity-65 bg-slate-50/50 border-slate-100' : 'bg-blue-50/30 border-blue-100 text-slate-900'}`}>
+                        <p className="font-semibold text-slate-900">{n.title}</p>
+                        <p className="text-slate-650 mt-0.5">{n.message}</p>
+                        <span className="text-[8px] text-slate-405 mt-1 block">
+                          {new Date(n.created_at * 1000).toLocaleTimeString()}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Log Out */}
+          <button
+            onClick={handleLogout}
+            className="p-2.5 hover:bg-slate-100 text-slate-500 hover:text-red-600 rounded-lg border border-slate-200 transition bg-white shadow-sm"
+            title="Log Out"
+          >
+            <LogOut className="w-4 h-4" />
           </button>
         </div>
       </div>
@@ -148,7 +266,7 @@ export default function SupervisorDashboard() {
 
         <div className="p-5 bg-white border border-slate-200 rounded-xl shadow-sm flex flex-col justify-between min-h-[120px] transition-all hover:shadow-md">
           <div className="flex items-start justify-between gap-3">
-            <span className="text-[10px] md:text-xs text-slate-500 font-bold uppercase tracking-wider block">Total Active Trains</span>
+            <span className="text-[10px] md:text-xs text-slate-500 font-bold uppercase tracking-wider block">Total Active Rakes</span>
             <div className="flex items-center justify-center w-10 h-10 rounded-lg border shrink-0 bg-purple-50 text-purple-600 border-purple-100">
               <FileText className="w-5 h-5" />
             </div>
@@ -163,13 +281,13 @@ export default function SupervisorDashboard() {
       <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <h2 className="font-semibold text-lg text-slate-900">
-            Inspection Submissions ({timeFilter.toUpperCase()})
+            Inspection Submissions ({timeFilter === 'custom' ? selectedCustomDate : timeFilter.toUpperCase()})
           </h2>
           <div className="relative w-full sm:w-72">
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
             <input
               type="text"
-              placeholder="Search by train no or name..."
+              placeholder="Search by rake no. or type..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-lg text-xs bg-slate-50 focus:outline-none focus:bg-white focus:border-blue-500"
@@ -186,8 +304,8 @@ export default function SupervisorDashboard() {
             <table className="w-full text-left text-xs border-collapse">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-100 text-slate-500 font-semibold">
-                  <th className="p-4">Train No.</th>
-                  <th className="p-4">Train Name</th>
+                  <th className="p-4">Rake Number</th>
+                  <th className="p-4">Rake Type</th>
                   <th className="p-4">Inspection Date</th>
                   <th className="p-4">Completed By (Ground Engineer)</th>
                   <th className="p-4 text-center">Status</th>
@@ -199,7 +317,7 @@ export default function SupervisorDashboard() {
                   <tr key={ins.id} className="border-b border-slate-100 hover:bg-slate-50/50">
                     <td className="p-4 font-mono font-bold text-blue-600">{ins.train_number}</td>
                     <td className="p-4 font-bold text-slate-900">{ins.train_name}</td>
-                    <td className="p-4 text-slate-550 text-slate-500 font-semibold">{ins.inspection_date}</td>
+                    <td className="p-4 text-slate-500 font-semibold">{ins.inspection_date}</td>
                     <td className="p-4 font-bold text-blue-600">
                       {ins.inspector_name || 'Ground Engineer'}
                     </td>
@@ -223,6 +341,95 @@ export default function SupervisorDashboard() {
           </div>
         )}
       </div>
+
+      {/* Custom Calendar Modal */}
+      {showCalendar && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-100 p-5 w-80 max-w-full animate-ios-spring space-y-4 relative">
+            <button 
+              onClick={() => setShowCalendar(false)} 
+              className="absolute -top-3 -right-3 bg-white border border-red-200 text-red-500 hover:bg-red-50 hover:text-red-650 transition rounded-full p-1.5 shadow-md flex items-center justify-center z-10"
+              title="Close Calendar"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+            
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <h3 className="font-bold text-sm text-slate-800">
+                {calendarMonth.toLocaleString('default', { month: 'long', year: 'numeric' })}
+              </h3>
+              <div className="flex items-center gap-1">
+                <button 
+                  type="button"
+                  onClick={() => setCalendarMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() - 1, 1))}
+                  className="p-1 hover:bg-slate-100 rounded transition text-slate-600"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <button 
+                  type="button"
+                  onClick={() => setCalendarMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + 1, 1))}
+                  className="p-1 hover:bg-slate-100 rounded transition text-slate-600"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* Days Label Header */}
+            <div className="grid grid-cols-7 text-center text-[10px] font-bold text-slate-400">
+              {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((day) => (
+                <div key={day} className="py-1">{day}</div>
+              ))}
+            </div>
+
+            {/* Days Grid */}
+            <div className="grid grid-cols-7 gap-1">
+              {(() => {
+                const year = calendarMonth.getFullYear();
+                const month = calendarMonth.getMonth();
+                const firstDayIndex = new Date(year, month, 1).getDay();
+                const totalDays = new Date(year, month + 1, 0).getDate();
+                
+                const cells = [];
+                // Pad previous month days
+                for (let i = 0; i < firstDayIndex; i++) {
+                  cells.push(<div key={`pad-${i}`} className="py-2" />);
+                }
+                // Month days
+                for (let d = 1; d <= totalDays; d++) {
+                  const dayDate = new Date(year, month, d);
+                  const dayStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                  const isSelected = selectedCustomDate === dayStr;
+                  const isToday = todayStr === dayStr;
+
+                  cells.push(
+                    <button
+                      key={`day-${d}`}
+                      type="button"
+                      onClick={() => {
+                        setSelectedCustomDate(dayStr);
+                        setTimeFilter('custom');
+                        setShowCalendar(false);
+                      }}
+                      className={`py-1.5 text-xs rounded-full font-semibold transition ${
+                        isSelected 
+                          ? 'bg-blue-600 text-white shadow-md' 
+                          : isToday 
+                            ? 'border border-blue-500 text-blue-600 hover:bg-blue-50' 
+                            : 'text-slate-750 hover:bg-slate-100'
+                      }`}
+                    >
+                      {d}
+                    </button>
+                  );
+                }
+                return cells;
+              })()}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

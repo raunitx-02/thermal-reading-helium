@@ -1,14 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../api';
 import { useAuth } from '../../contexts/AuthContext';
-import { FileText, Download, RefreshCw, Search } from 'lucide-react';
+import { FileText, Download, RefreshCw, Search, Calendar, ChevronLeft, ChevronRight, X } from 'lucide-react';
 
 export default function EngineerHistory() {
   const { user } = useAuth();
   const [inspections, setInspections] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [timeFilter, setTimeFilter] = useState('all'); // 'today', 'weekly', 'monthly', 'all'
+  const [timeFilter, setTimeFilter] = useState('today'); // 'today', 'weekly', 'monthly', 'custom'
   const [searchTerm, setSearchTerm] = useState('');
+
+  // Custom Calendar state
+  const [showCalendar, setShowCalendar] = useState(false);
+  const [calendarMonth, setCalendarMonth] = useState(new Date());
+  const [selectedCustomDate, setSelectedCustomDate] = useState('');
 
   const fetchHistory = async () => {
     setLoading(true);
@@ -41,6 +46,8 @@ export default function EngineerHistory() {
       } else if (timeFilter === 'monthly') {
         const diff = (now - date) / (1000 * 3600 * 24);
         return diff <= 30;
+      } else if (timeFilter === 'custom') {
+        return i.inspection_date === selectedCustomDate;
       }
       return true;
     });
@@ -76,7 +83,7 @@ export default function EngineerHistory() {
         </div>
         <div className="flex items-center gap-3">
           <div className="bg-white border border-slate-200 rounded-lg p-1 flex gap-1 shadow-sm">
-            {['today', 'weekly', 'monthly', 'all'].map((filter) => (
+            {['today', 'weekly', 'monthly'].map((filter) => (
               <button
                 key={filter}
                 onClick={() => setTimeFilter(filter)}
@@ -85,6 +92,13 @@ export default function EngineerHistory() {
                 {filter}
               </button>
             ))}
+            <button
+              onClick={() => setShowCalendar(true)}
+              className={`px-3 py-1.5 rounded-md text-xs font-semibold uppercase tracking-wider transition flex items-center gap-1 ${timeFilter === 'custom' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-900'}`}
+            >
+              <span>{timeFilter === 'custom' ? selectedCustomDate : 'Custom Date'}</span>
+              <Calendar className="w-3.5 h-3.5" />
+            </button>
           </div>
           <button onClick={fetchHistory} className="p-2.5 bg-white border border-slate-200 text-slate-650 hover:text-slate-900 rounded-lg transition shadow-sm">
             <RefreshCw className="w-4 h-4" />
@@ -95,7 +109,9 @@ export default function EngineerHistory() {
       {/* Main List */}
       <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <h2 className="font-semibold text-lg text-slate-900">Your Logged Submissions</h2>
+          <h2 className="font-semibold text-lg text-slate-900">
+            Your Logged Submissions ({timeFilter === 'custom' ? selectedCustomDate : timeFilter.toUpperCase()})
+          </h2>
           <div className="relative w-full sm:w-72">
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
             <input
@@ -150,6 +166,96 @@ export default function EngineerHistory() {
           </div>
         )}
       </div>
+
+      {/* Custom Calendar Modal */}
+      {showCalendar && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-100 p-5 w-80 max-w-full animate-ios-spring space-y-4 relative">
+            <button 
+              onClick={() => setShowCalendar(false)} 
+              className="absolute -top-3 -right-3 bg-white border border-red-200 text-red-500 hover:bg-red-50 hover:text-red-650 transition rounded-full p-1.5 shadow-md flex items-center justify-center z-10"
+              title="Close Calendar"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+            
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <h3 className="font-bold text-sm text-slate-800">
+                {calendarMonth.toLocaleString('default', { month: 'long', year: 'numeric' })}
+              </h3>
+              <div className="flex items-center gap-1">
+                <button 
+                  type="button"
+                  onClick={() => setCalendarMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() - 1, 1))}
+                  className="p-1 hover:bg-slate-100 rounded transition text-slate-600"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <button 
+                  type="button"
+                  onClick={() => setCalendarMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + 1, 1))}
+                  className="p-1 hover:bg-slate-100 rounded transition text-slate-600"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* Days Label Header */}
+            <div className="grid grid-cols-7 text-center text-[10px] font-bold text-slate-400">
+              {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((day) => (
+                <div key={day} className="py-1">{day}</div>
+              ))}
+            </div>
+
+            {/* Days Grid */}
+            <div className="grid grid-cols-7 gap-1">
+              {(() => {
+                const year = calendarMonth.getFullYear();
+                const month = calendarMonth.getMonth();
+                const firstDayIndex = new Date(year, month, 1).getDay();
+                const totalDays = new Date(year, month + 1, 0).getDate();
+                const todayStr = new Date().toISOString().split('T')[0];
+                
+                const cells = [];
+                // Pad previous month days
+                for (let i = 0; i < firstDayIndex; i++) {
+                  cells.push(<div key={`pad-${i}`} className="py-2" />);
+                }
+                // Month days
+                for (let d = 1; d <= totalDays; d++) {
+                  const dayDate = new Date(year, month, d);
+                  const dayStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                  const isSelected = selectedCustomDate === dayStr;
+                  const isToday = todayStr === dayStr;
+
+                  cells.push(
+                    <button
+                      key={`day-${d}`}
+                      type="button"
+                      onClick={() => {
+                        setSelectedCustomDate(dayStr);
+                        setTimeFilter('custom');
+                        setShowCalendar(false);
+                      }}
+                      className={`py-1.5 text-xs rounded-full font-semibold transition ${
+                        isSelected 
+                          ? 'bg-blue-600 text-white shadow-md' 
+                          : isToday 
+                            ? 'border border-blue-500 text-blue-600 hover:bg-blue-50' 
+                            : 'text-slate-755 hover:bg-slate-100'
+                      }`}
+                    >
+                      {d}
+                    </button>
+                  );
+                }
+                return cells;
+              })()}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

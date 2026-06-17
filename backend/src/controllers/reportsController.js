@@ -56,7 +56,7 @@ exports.getReportData = (req, res, next) => {
       
     } else if (type === 'history') {
       let query = `
-        SELECT r.temperature, r.status, r.recorded_at, r.notes,
+        SELECT r.temperature, r.ambient_temperature, r.status, r.recorded_at, r.notes,
                t.train_number, t.train_name, c.coach_number, z.zone_name, z.zone_type,
                u.name as inspector_name
         FROM thermal_readings r
@@ -123,7 +123,8 @@ exports.downloadReport = async (req, res, next) => {
     } else {
       records = db.prepare(`
         SELECT date(r.recorded_at, 'unixepoch') as date, t.train_number as train, c.coach_number as coach,
-               z.zone_name as zone, r.temperature as temp, r.status
+               z.zone_name as zone, r.temperature as max_temp, r.ambient_temperature as ambient_temp,
+               (r.temperature - r.ambient_temperature) as rise, r.status
         FROM thermal_readings r
         JOIN inspection_sessions s ON r.session_id = s.id
         JOIN zones z ON r.zone_id = z.id

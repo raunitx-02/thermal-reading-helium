@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useModal } from '../contexts/ModalContext';
 import api from '../api';
 import {
   LayoutDashboard,
@@ -17,6 +18,7 @@ import {
 export default function Sidebar() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const { showConfirm } = useModal();
   const [notifications, setNotifications] = useState([]);
   const [showNotif, setShowNotif] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -52,6 +54,14 @@ export default function Sidebar() {
   };
 
   const handleLogout = async () => {
+    const confirmed = await showConfirm(
+      'Confirm Logout',
+      'Are you sure you want to log out of the system?',
+      'confirm',
+      'Yes, Logout',
+      'Cancel'
+    );
+    if (!confirmed) return;
     await logout();
     navigate('/login');
   };
@@ -62,13 +72,14 @@ export default function Sidebar() {
 
   const branchAdminLinks = [
     { to: '/branch-admin/dashboard', label: 'Supervisors', icon: Users },
-    { to: '/branch-admin/trains', label: 'Configure Trains', icon: Train }
+    { to: '/branch-admin/trains', label: 'Configure Rakes', icon: Train }
   ];
 
   const supervisorLinks = [
     { to: '/supervisor/dashboard', label: 'Inspections Logs', icon: LayoutDashboard },
     { to: '/supervisor/ground-engineers', label: 'Ground Engineers', icon: Users },
-    { to: '/supervisor/assignments', label: 'Assign Inspections', icon: FileSpreadsheet }
+    { to: '/supervisor/assignments', label: 'Assign Rakes', icon: FileSpreadsheet },
+    { to: '/supervisor/trains', label: 'Configure Rakes', icon: Train }
   ];
 
   const groundEngineerLinks = [
@@ -91,14 +102,16 @@ export default function Sidebar() {
     <div className="flex flex-col h-full bg-white border-r border-slate-200 text-slate-700 relative">
       {/* Brand Header */}
       <div className="p-6 border-b border-slate-200 flex items-center justify-between bg-slate-50/50">
-        <div>
-          <h2 className="font-bold text-base text-slate-900 flex items-center gap-2">
-            <img src="/ir-logo.png" className="w-8 h-8 object-contain" alt="IR logo" />
-            Indian Railways
-          </h2>
-          <span className="text-[10px] text-blue-650 text-blue-600 font-bold uppercase tracking-wider block mt-0.5">
-            Save Life Smartly
-          </span>
+        <div className="flex items-center gap-3">
+          <img src="/ir-logo.png" className="w-8 h-8 object-contain shrink-0" alt="IR logo" />
+          <div className="flex flex-col">
+            <h2 className="font-bold text-base text-slate-900 leading-tight">
+              Indian Railways
+            </h2>
+            <span className="text-[10px] text-blue-600 font-bold uppercase tracking-wider block mt-0.5 leading-none">
+              SAVE LIFE SMARTLY
+            </span>
+          </div>
         </div>
         <button onClick={() => setMobileOpen(false)} className="md:hidden text-slate-500 hover:text-slate-900">
           <X className="w-5 h-5" />
@@ -176,34 +189,7 @@ export default function Sidebar() {
             </div>
           </div>
 
-          {/* Action buttons row */}
-          {user?.role !== 'super_admin' && (
-            <div className="flex items-center justify-between border-t border-slate-200/60 pt-3">
-              <span className="text-[10px] text-slate-400 font-semibold">Active Session</span>
-              <div className="flex items-center gap-1.5 shrink-0">
-                <button
-                  onClick={() => {
-                    setShowNotif(!showNotif);
-                    if (!showNotif) handleMarkRead();
-                  }}
-                  className={`p-2 border border-slate-200 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition relative shadow-sm ${showNotif ? 'bg-slate-100' : 'bg-white'}`}
-                  title="Notifications"
-                >
-                  <Bell className="w-4 h-4" />
-                  {unreadCount > 0 && (
-                    <span className="absolute top-1 right-1 w-1.5 h-1.5 bg-red-600 rounded-full" />
-                  )}
-                </button>
-                <button
-                  onClick={handleLogout}
-                  className="p-2 hover:bg-slate-100 text-slate-500 hover:text-red-600 rounded-lg border border-slate-200 transition bg-white shadow-sm"
-                  title="Log Out"
-                >
-                  <LogOut className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-          )}
+
         </div>
       </div>
     </div>

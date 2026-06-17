@@ -15,7 +15,6 @@ export default function Users() {
   const [role, setRole] = useState('inspector');
   const [division, setDivision] = useState('Mumbai');
   const [phone, setPhone] = useState('');
-  const [employeeId, setEmployeeId] = useState('');
   const [isActive, setIsActive] = useState(true);
 
   const fetchUsers = async () => {
@@ -34,7 +33,7 @@ export default function Users() {
   const handleSave = async (e) => {
     e.preventDefault();
     const payload = {
-      name, email, role, division, phone, employee_id: employeeId,
+      name, email, role, division, phone, employee_id: null,
       is_active: isActive ? 1 : 0
     };
     if (password) payload.password = password;
@@ -63,7 +62,6 @@ export default function Users() {
     setRole(user.role);
     setDivision(user.division);
     setPhone(user.phone || '');
-    setEmployeeId(user.employee_id || '');
     setIsActive(user.is_active === 1);
     setModalOpen(true);
   };
@@ -76,7 +74,6 @@ export default function Users() {
     setRole('inspector');
     setDivision('Mumbai');
     setPhone('');
-    setEmployeeId('');
     setIsActive(true);
   };
 
@@ -119,7 +116,7 @@ export default function Users() {
             <table className="w-full text-left text-xs border-collapse">
               <thead>
                 <tr className="border-b border-slate-200 text-slate-500 uppercase font-semibold">
-                  <th className="py-3 px-4">Name / ID</th>
+                  <th className="py-3 px-4">Name</th>
                   <th className="py-3 px-4">Email</th>
                   <th className="py-3 px-4">Role</th>
                   <th className="py-3 px-4">Division</th>
@@ -133,7 +130,6 @@ export default function Users() {
                   <tr key={u.id} className="hover:bg-slate-50/50">
                     <td className="py-3.5 px-4">
                       <div className="font-bold text-slate-900">{u.name}</div>
-                      <div className="text-[10px] text-slate-500 mt-0.5">{u.employee_id || 'N/A'}</div>
                     </td>
                     <td className="py-3.5 px-4 font-mono text-slate-600">{u.email}</td>
                     <td className="py-3.5 px-4 capitalize">
@@ -235,27 +231,15 @@ export default function Users() {
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Employee ID</label>
-                  <input
-                    type="text"
-                    value={employeeId}
-                    onChange={(e) => setEmployeeId(e.target.value)}
-                    placeholder="WR-INS-045"
-                    className="w-full bg-white border border-slate-200 rounded-lg p-2.5 text-sm text-slate-900 focus:outline-none focus:border-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Phone Number</label>
-                  <input
-                    type="text"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    placeholder="9876543210"
-                    className="w-full bg-white border border-slate-200 rounded-lg p-2.5 text-sm text-slate-900 focus:outline-none focus:border-blue-500"
-                  />
-                </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Phone Number</label>
+                <input
+                  type="text"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="9876543210"
+                  className="w-full bg-white border border-slate-200 rounded-lg p-2.5 text-sm text-slate-900 focus:outline-none focus:border-blue-500"
+                />
               </div>
               {editUser && (
                 <div className="flex items-center gap-2 pt-2">

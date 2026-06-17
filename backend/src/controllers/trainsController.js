@@ -30,66 +30,120 @@ exports.getTrainById = (req, res, next) => {
 exports.createTrain = (req, res, next) => {
   try {
     const { train_number, train_name, route, division, frequency, custom_safe_max, custom_warning_max, custom_critical_max } = req.body;
-    if (!train_number || !train_name || !route || !division) return res.status(400).json({ success: false, message: 'train_number, train_name, route, division required' });
-    
-    // Check IRCTC constraints
-    const irctcData = require('../config/irctcData');
-    const trainInfo = irctcData[train_number];
-    if (trainInfo) {
-      const city = req.user.city;
-      if (city && req.user.role === 'branch_admin') {
-        const cityNormalized = city.replace(/city|district/gi, '').trim().toLowerCase();
-        const matchesCity = trainInfo.stops.some(stop => stop.toLowerCase().includes(cityNormalized)) ||
-                            trainInfo.route.toLowerCase().includes(cityNormalized);
-        if (!matchesCity) {
-          return res.status(400).json({ success: false, message: "Train doesn't belongs to your city" });
-        }
-      }
-    }
+    if (!train_number || !train_name || !route || !division) return res.status(400).json({ success: false, message: 'Rake number, type, route, and division are required' });
 
     const db = getDb();
     const id = uuidv4(); const now = Math.floor(Date.now() / 1000);
     db.prepare(`INSERT INTO trains (id, train_number, train_name, route, division, frequency, custom_safe_max, custom_warning_max, custom_critical_max, created_by, is_active, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)`)
       .run(id, train_number, train_name, route, division, frequency || 'Daily', custom_safe_max || 60.0, custom_warning_max || 70.0, custom_critical_max || 85.0, req.user.id, now, now);
     
-    // Auto-populate default coaches & zones
-    const defaultCoaches = ['Loco', 'AC-2', 'AC-3', 'Pantry', 'SL', 'GEN'];
+    // Auto-populate default coaches & zones based on Rake Type (train_name)
     const insertCoach = db.prepare('INSERT INTO coaches (id, train_id, coach_number, coach_type, sequence_order, is_active, created_at) VALUES (?, ?, ?, ?, ?, 1, ?)');
     const insertZone = db.prepare('INSERT INTO zones (id, coach_id, zone_name, zone_type, normal_min, normal_max, warning_threshold, critical_threshold, is_active, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?)');
 
-    const defaultZones = {
-      'Loco': [
-        { name: 'Traction Motor - Front', type: 'Traction', min: 30, max: custom_safe_max || 60, warn: custom_warning_max || 70, crit: custom_critical_max || 85 },
-        { name: 'Bogie Axle Box - Left', type: 'Bogie', min: 20, max: custom_safe_max || 60, warn: custom_warning_max || 70, crit: custom_critical_max || 85 }
-      ],
-      'AC-2': [
-        { name: 'AC Compressor Unit', type: 'HVAC', min: 20, max: 55, warn: custom_warning_max || 65, crit: custom_critical_max || 80 },
-        { name: 'Bogie Axle Box - Left', type: 'Bogie', min: 20, max: custom_safe_max || 60, warn: custom_warning_max || 70, crit: custom_critical_max || 85 }
-      ],
-      'AC-3': [
-        { name: 'AC Compressor Unit', type: 'HVAC', min: 20, max: 55, warn: custom_warning_max || 65, crit: custom_critical_max || 80 },
-        { name: 'Bogie Axle Box - Right', type: 'Bogie', min: 20, max: custom_safe_max || 60, warn: custom_warning_max || 70, crit: custom_critical_max || 85 }
-      ],
-      'Pantry': [
-        { name: 'Kitchen Exhaust', type: 'Ventilation', min: 20, max: 70, warn: custom_warning_max || 80, crit: custom_critical_max || 95 }
-      ],
-      'SL': [
-        { name: 'Lighting Panel', type: 'Electrical', min: 20, max: 50, warn: custom_warning_max || 60, crit: custom_critical_max || 75 },
-        { name: 'Bogie Axle Box - Left', type: 'Bogie', min: 20, max: custom_safe_max || 60, warn: custom_warning_max || 70, crit: custom_critical_max || 85 }
-      ],
-      'GEN': [
-        { name: 'Bogie Axle Box - Left', type: 'Bogie', min: 20, max: custom_safe_max || 60, warn: custom_warning_max || 70, crit: custom_critical_max || 85 }
-      ]
-    };
+    const rakeType = train_name.toUpperCase();
+    let coachList = [];
 
-    defaultCoaches.forEach((type, idx) => {
+    if (rakeType === 'MEMU') {
+      coachList = [
+        { name: 'DMC1', type: 'Loco' },
+        { name: 'TC1', type: 'GEN' },
+        { name: 'TC2', type: 'GEN' },
+        { name: 'TC3', type: 'GEN' },
+        { name: 'DMC2', type: 'Loco' },
+        { name: 'TC4', type: 'GEN' },
+        { name: 'TC5', type: 'GEN' },
+        { name: 'TC6', type: 'GEN' },
+        { name: 'TC7', type: 'GEN' },
+        { name: 'TC8', type: 'GEN' },
+        { name: 'TC9', type: 'GEN' },
+        { name: 'DMC3', type: 'Loco' }
+      ];
+    } else if (rakeType === 'DEMU') {
+      coachList = [
+        { name: 'DPC1', type: 'Loco' },
+        { name: 'TC1', type: 'GEN' },
+        { name: 'TC2', type: 'GEN' },
+        { name: 'TC3', type: 'GEN' },
+        { name: 'TC4', type: 'GEN' },
+        { name: 'TC5', type: 'GEN' },
+        { name: 'TC6', type: 'GEN' },
+        { name: 'TC7', type: 'GEN' },
+        { name: 'TC8', type: 'GEN' },
+        { name: 'TC9', type: 'GEN' },
+        { name: 'TC10', type: 'GEN' },
+        { name: 'DPC2', type: 'Loco' }
+      ];
+    } else { // LHB or default
+      coachList = [
+        { name: 'Power-Car1', type: 'Loco' },
+        { name: 'AC-1', type: 'AC-1' },
+        { name: 'AC-2', type: 'AC-2' },
+        { name: 'AC-3', type: 'AC-3' },
+        { name: 'Pantry', type: 'Pantry' },
+        { name: 'SL1', type: 'SL' },
+        { name: 'GEN1', type: 'GEN' },
+        { name: 'Power-Car2', type: 'Loco' }
+      ];
+    }
+
+    coachList.forEach((c, idx) => {
       const coachId = uuidv4();
-      const coachNo = `${type === 'Loco' ? 'LOCO' : type.replace('-', '')}-${100 + idx}`;
-      insertCoach.run(coachId, id, coachNo, type, idx + 1, now);
+      insertCoach.run(coachId, id, c.name, c.type, idx + 1, now);
       
-      const zones = defaultZones[type] || [];
+      // Determine default zones for the coach
+      let zones = [];
+      if (c.name.startsWith('DMC')) {
+        zones = [
+          { name: 'CRW MCB Panel', type: 'Electrical' },
+          { name: 'Contactor panel', type: 'Electrical' },
+          { name: 'MCC', type: 'Electrical' },
+          { name: 'Transformer Name Plate side', type: 'Transformer' },
+          { name: 'TF Radiator side', type: 'Transformer' },
+          { name: 'TF Terminal side1(Outer Side)', type: 'Transformer' },
+          { name: 'TF Terminal side2(Inner Side)', type: 'Transformer' },
+          { name: 'Women Compartment LHS Panel', type: 'Electrical' },
+          { name: 'Women Compartment RHS Panel', type: 'Electrical' }
+        ];
+      } else if (c.name.startsWith('DPC')) {
+        zones = [
+          { name: 'Control Panel Upper', type: 'Electrical' },
+          { name: 'Control Panel Lower', type: 'Electrical' },
+          { name: 'Contactor panel', type: 'Electrical' },
+          { name: 'Engine Room End Panel', type: 'Engine' },
+          { name: 'Rectifier Terminal', type: 'Electrical' },
+          { name: 'Auxiliary Power Converter', type: 'Electrical' },
+          { name: 'Traction Converter Unit', type: 'Traction' },
+          { name: 'Women Compartment LHS Panel', type: 'Electrical' },
+          { name: 'Women Compartment RHS Panel', type: 'Electrical' }
+        ];
+      } else if (c.name.startsWith('TC')) {
+        zones = [
+          { name: 'AE Side', type: 'Axle Box' },
+          { name: 'NAE Side', type: 'Axle Box' }
+        ];
+      } else if (c.type === 'Loco' || c.name.includes('Power-Car')) {
+        zones = [
+          { name: 'Alternator Unit', type: 'Alternator' },
+          { name: 'Diesel Engine', type: 'Engine' }
+        ];
+      } else if (c.type.startsWith('AC')) {
+        zones = [
+          { name: 'Switchboard Cabinet', type: 'Electrical' },
+          { name: 'Battery Box', type: 'Battery' },
+          { name: 'Axle Box Left', type: 'Axle Box' },
+          { name: 'Axle Box Right', type: 'Axle Box' }
+        ];
+      } else {
+        zones = [
+          { name: 'Switchboard Panel', type: 'Electrical' },
+          { name: 'Axle Box Left', type: 'Axle Box' },
+          { name: 'Axle Box Right', type: 'Axle Box' }
+        ];
+      }
+
       zones.forEach(z => {
-        insertZone.run(uuidv4(), coachId, z.name, z.type, z.min, z.max, z.warn, z.crit, now);
+        insertZone.run(uuidv4(), coachId, z.name, z.type, 20.0, 60.0, 70.0, 85.0, now);
       });
     });
 

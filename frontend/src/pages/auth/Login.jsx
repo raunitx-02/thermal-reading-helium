@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { Shield, Mail, Lock, AlertTriangle, Train } from 'lucide-react';
@@ -9,8 +9,21 @@ export default function Login() {
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   
-  const { login } = useAuth();
+  const { login, user } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (user) {
+      let dest = '/login';
+      if (user.role === 'super_admin') dest = '/super-admin/dashboard';
+      else if (user.role === 'branch_admin') dest = '/branch-admin/dashboard';
+      else if (user.role === 'supervisor') dest = '/supervisor/dashboard';
+      else if (user.role === 'ground_engineer') dest = '/ground-engineer/dashboard';
+      if (dest !== '/login') {
+        navigate(dest, { replace: true });
+      }
+    }
+  }, [user, navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -44,9 +57,7 @@ export default function Login() {
 
       <div className="w-full max-w-md bg-white border border-slate-200 shadow-xl shadow-slate-100/60 rounded-xl p-8 relative z-10">
         <div className="flex flex-col items-center mb-8">
-          <div className="w-16 h-16 bg-white border border-slate-200 rounded-2xl flex items-center justify-center mb-3 p-1">
-            <img src="/ir-logo.png" className="w-12 h-12 object-contain" alt="IR Logo" />
-          </div>
+          <img src="/ir-logo.png" className="w-24 h-24 object-contain mb-3" alt="IR Logo" />
           <h1 className="text-2xl font-bold tracking-tight text-slate-900">Indian Railways</h1>
           <p className="text-blue-600 font-bold text-xs mt-1">Save Life Smartly</p>
         </div>

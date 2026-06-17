@@ -14,6 +14,21 @@ db.exec(schema);
 
 console.log('🌱 Seeding database...');
 
+// Clean existing data to ensure a fresh state
+db.exec('PRAGMA foreign_keys = OFF');
+db.exec('DELETE FROM assignments');
+db.exec('DELETE FROM alerts');
+db.exec('DELETE FROM thermal_readings');
+db.exec('DELETE FROM inspection_sessions');
+db.exec('DELETE FROM zones');
+db.exec('DELETE FROM coaches');
+db.exec('DELETE FROM trains');
+db.exec('DELETE FROM kpi_targets');
+db.exec('DELETE FROM kpi_records');
+db.exec('DELETE FROM users');
+db.exec('DELETE FROM system_settings');
+db.exec('PRAGMA foreign_keys = ON');
+
 // Helper
 const now = Math.floor(Date.now() / 1000);
 const today = new Date().toISOString().split('T')[0];
@@ -66,16 +81,11 @@ console.log('   - Branch Admin: anil.mehta@thermalportal.in / Branch@123 (Mahara
 console.log('   - Supervisor: priya.nair@thermalportal.in / Supervisor@123');
 console.log('   - Ground Eng: suresh.patil@thermalportal.in / Inspector@123');
 
-// ─── 3. TRAINS (Real Indian Railway trains) ─────────────────────────────────
+// ─── 3. RAKES ───────────────────────────────────────────────────────────────
 const trainData = [
-  { number: '12951', name: 'Mumbai Rajdhani Express', route: 'Mumbai Central → New Delhi', division: 'Mumbai', frequency: 'Daily' },
-  { number: '12009', name: 'Shatabdi Express', route: 'Mumbai Central → Ahmedabad', division: 'Mumbai', frequency: 'Daily' },
-  { number: '12031', name: 'Shatabdi Express', route: 'Mumbai Central → Pune', division: 'Mumbai', frequency: 'Daily' },
-  { number: '11401', name: 'Nandigram Express', route: 'Gondia → Mumbai CSMT', division: 'Mumbai', frequency: 'Daily' },
-  { number: '12137', name: 'Punjab Mail', route: 'Mumbai CST → Firozpur Cantonment', division: 'Mumbai', frequency: 'Daily' },
-  { number: '22221', name: 'CSMT Rajdhani Express', route: 'Mumbai CSMT → New Delhi', division: 'Mumbai', frequency: 'Daily' },
-  { number: '12263', name: 'Pune Duronto Express', route: 'Pune → New Delhi', division: 'Pune', frequency: 'Mon,Wed,Fri' },
-  { number: '11013', name: 'Coimbatore Express', route: 'Mumbai LTT → Coimbatore', division: 'Mumbai', frequency: 'Daily' },
+  { number: '218113 / 208272 / 218114', name: 'MEMU', route: 'Mumbai City Branch', division: 'Mumbai', frequency: 'Daily' },
+  { number: '199123 / 199124', name: 'DEMU', route: 'Mumbai City Branch', division: 'Mumbai', frequency: 'Daily' },
+  { number: '210344 / 210345', name: 'LHB', route: 'Mumbai City Branch', division: 'Mumbai', frequency: 'Daily' },
 ];
 
 const trains = [];
@@ -85,77 +95,9 @@ trainData.forEach(t => {
   trains.push({ id, ...t });
   insertTrain.run(id, t.number, t.name, t.route, t.division, t.frequency, now, now);
 });
-console.log('✅ Trains seeded');
+console.log('✅ Rakes seeded');
 
-// ─── 4. COACHES + ZONES ─────────────────────────────────────────────────────
-const coachTypes = {
-  '12951': ['Loco', 'AC-1', 'AC-2', 'AC-2', 'AC-3', 'AC-3', 'AC-3', 'Pantry', 'SL', 'SL', 'GEN'],
-  '12009': ['Loco', 'AC-2', 'AC-3', 'AC-3', 'AC-3', 'Pantry', 'SL', 'GEN'],
-  '12031': ['Loco', 'AC-2', 'AC-3', 'AC-3', 'Pantry', 'SL'],
-  '11401': ['Loco', 'SL', 'SL', 'SL', 'SL', 'GEN', 'GEN'],
-  '12137': ['Loco', 'AC-1', 'AC-2', 'AC-3', 'AC-3', 'SL', 'SL', 'GEN'],
-  '22221': ['Loco', 'AC-1', 'AC-2', 'AC-2', 'AC-3', 'AC-3', 'Pantry', 'SL', 'GEN'],
-  '12263': ['Loco', 'AC-2', 'AC-3', 'AC-3', 'Pantry'],
-  '11013': ['Loco', 'SL', 'SL', 'SL', 'GEN', 'GEN'],
-};
-
-const zonesByCoachType = {
-  'Loco': [
-    { name: 'Traction Motor - Front', type: 'Traction', min: 30, max: 80, warn: 90, crit: 110 },
-    { name: 'Traction Motor - Rear', type: 'Traction', min: 30, max: 80, warn: 90, crit: 110 },
-    { name: 'Main Control Panel', type: 'Electrical', min: 25, max: 65, warn: 75, crit: 90 },
-    { name: 'Auxiliary Power Unit', type: 'Electrical', min: 25, max: 70, warn: 80, crit: 95 },
-    { name: 'Bogie Axle Box - Left', type: 'Bogie', min: 20, max: 60, warn: 70, crit: 85 },
-    { name: 'Bogie Axle Box - Right', type: 'Bogie', min: 20, max: 60, warn: 70, crit: 85 },
-  ],
-  'AC-1': [
-    { name: 'AC Compressor Unit', type: 'HVAC', min: 20, max: 55, warn: 65, crit: 80 },
-    { name: 'AC Condenser', type: 'HVAC', min: 30, max: 60, warn: 70, crit: 85 },
-    { name: 'Lighting Panel', type: 'Electrical', min: 20, max: 50, warn: 60, crit: 75 },
-    { name: 'Bogie Axle Box - Left', type: 'Bogie', min: 20, max: 60, warn: 70, crit: 85 },
-    { name: 'Bogie Axle Box - Right', type: 'Bogie', min: 20, max: 60, warn: 70, crit: 85 },
-    { name: 'Fan Motor', type: 'Electrical', min: 20, max: 55, warn: 65, crit: 80 },
-    { name: 'Under-Floor Heater', type: 'Heating', min: 25, max: 65, warn: 75, crit: 90 },
-  ],
-  'AC-2': [
-    { name: 'AC Compressor Unit', type: 'HVAC', min: 20, max: 55, warn: 65, crit: 80 },
-    { name: 'AC Condenser', type: 'HVAC', min: 30, max: 60, warn: 70, crit: 85 },
-    { name: 'Lighting Panel', type: 'Electrical', min: 20, max: 50, warn: 60, crit: 75 },
-    { name: 'Bogie Axle Box - Left', type: 'Bogie', min: 20, max: 60, warn: 70, crit: 85 },
-    { name: 'Bogie Axle Box - Right', type: 'Bogie', min: 20, max: 60, warn: 70, crit: 85 },
-    { name: 'Fan Motor', type: 'Electrical', min: 20, max: 55, warn: 65, crit: 80 },
-    { name: 'Control Panel', type: 'Electrical', min: 20, max: 55, warn: 65, crit: 80 },
-  ],
-  'AC-3': [
-    { name: 'AC Compressor Unit', type: 'HVAC', min: 20, max: 55, warn: 65, crit: 80 },
-    { name: 'AC Condenser', type: 'HVAC', min: 30, max: 60, warn: 70, crit: 85 },
-    { name: 'Lighting Panel', type: 'Electrical', min: 20, max: 50, warn: 60, crit: 75 },
-    { name: 'Bogie Axle Box - Left', type: 'Bogie', min: 20, max: 60, warn: 70, crit: 85 },
-    { name: 'Bogie Axle Box - Right', type: 'Bogie', min: 20, max: 60, warn: 70, crit: 85 },
-    { name: 'Fan Motor', type: 'Electrical', min: 20, max: 55, warn: 65, crit: 80 },
-  ],
-  'SL': [
-    { name: 'Lighting Panel', type: 'Electrical', min: 20, max: 50, warn: 60, crit: 75 },
-    { name: 'Fan Motor', type: 'Electrical', min: 20, max: 55, warn: 65, crit: 80 },
-    { name: 'Bogie Axle Box - Left', type: 'Bogie', min: 20, max: 60, warn: 70, crit: 85 },
-    { name: 'Bogie Axle Box - Right', type: 'Bogie', min: 20, max: 60, warn: 70, crit: 85 },
-    { name: 'Brake System', type: 'Mechanical', min: 20, max: 60, warn: 70, crit: 85 },
-  ],
-  'GEN': [
-    { name: 'Lighting Panel', type: 'Electrical', min: 20, max: 50, warn: 60, crit: 75 },
-    { name: 'Bogie Axle Box - Left', type: 'Bogie', min: 20, max: 60, warn: 70, crit: 85 },
-    { name: 'Bogie Axle Box - Right', type: 'Bogie', min: 20, max: 60, warn: 70, crit: 85 },
-    { name: 'Brake System', type: 'Mechanical', min: 20, max: 60, warn: 70, crit: 85 },
-  ],
-  'Pantry': [
-    { name: 'Refrigeration Unit', type: 'HVAC', min: 2, max: 8, warn: 12, crit: 18 },
-    { name: 'Cooking Range Panel', type: 'Electrical', min: 20, max: 70, warn: 85, crit: 100 },
-    { name: 'Lighting Panel', type: 'Electrical', min: 20, max: 50, warn: 60, crit: 75 },
-    { name: 'Bogie Axle Box - Left', type: 'Bogie', min: 20, max: 60, warn: 70, crit: 85 },
-    { name: 'Bogie Axle Box - Right', type: 'Bogie', min: 20, max: 60, warn: 70, crit: 85 },
-  ],
-};
-
+// ─── 4. COACHES + ZONES (Preserving Rake Presets) ───────────────────────────
 const insertCoach = db.prepare(`INSERT OR IGNORE INTO coaches (id, train_id, coach_number, coach_type, sequence_order, is_active, created_at) VALUES (?, ?, ?, ?, ?, 1, ?)`);
 const insertZone = db.prepare(`INSERT OR IGNORE INTO zones (id, coach_id, zone_name, zone_type, normal_min, normal_max, warning_threshold, critical_threshold, is_active, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?)`);
 
@@ -163,24 +105,106 @@ const allCoaches = [];
 const allZones = [];
 
 trains.forEach(train => {
-  const types = coachTypes[train.train_number] || ['Loco', 'SL', 'GEN'];
-  types.forEach((type, idx) => {
+  const rakeType = train.name.toUpperCase();
+  let coachList = [];
+
+  if (rakeType === 'MEMU') {
+    coachList = [
+      { name: 'DMC1', type: 'Loco' },
+      { name: 'TC1', type: 'GEN' },
+      { name: 'TC2', type: 'GEN' },
+      { name: 'TC3', type: 'GEN' },
+      { name: 'DMC2', type: 'Loco' },
+      { name: 'TC4', type: 'GEN' },
+      { name: 'TC5', type: 'GEN' },
+      { name: 'TC6', type: 'GEN' },
+      { name: 'TC7', type: 'GEN' },
+      { name: 'TC8', type: 'GEN' },
+      { name: 'TC9', type: 'GEN' },
+      { name: 'DMC3', type: 'Loco' }
+    ];
+  } else if (rakeType === 'DEMU') {
+    coachList = [
+      { name: 'DPC1', type: 'Loco' },
+      { name: 'TC1', type: 'GEN' },
+      { name: 'TC2', type: 'GEN' },
+      { name: 'TC3', type: 'GEN' },
+      { name: 'TC4', type: 'GEN' },
+      { name: 'TC5', type: 'GEN' },
+      { name: 'TC6', type: 'GEN' },
+      { name: 'TC7', type: 'GEN' },
+      { name: 'TC8', type: 'GEN' },
+      { name: 'TC9', type: 'GEN' },
+      { name: 'TC10', type: 'GEN' },
+      { name: 'DPC2', type: 'Loco' }
+    ];
+  } else {
+    coachList = [
+      { name: 'Power-Car1', type: 'Loco' },
+      { name: 'AC-1', type: 'AC-1' },
+      { name: 'AC-2', type: 'AC-2' },
+      { name: 'AC-3', type: 'AC-3' },
+      { name: 'Pantry', type: 'Pantry' },
+      { name: 'SL1', type: 'SL' },
+      { name: 'GEN1', type: 'GEN' },
+      { name: 'Power-Car2', type: 'Loco' }
+    ];
+  }
+
+  coachList.forEach((c, idx) => {
     const coachId = uuidv4();
-    const coachNum = `${type.replace('-', '')}-${String(idx + 1).padStart(2, '0')}`;
-    insertCoach.run(coachId, train.id, coachNum, type, idx + 1, now);
-    allCoaches.push({ id: coachId, train_id: train.id, coach_number: coachNum, coach_type: type });
-    const zones = zonesByCoachType[type] || zonesByCoachType['GEN'];
+    insertCoach.run(coachId, train.id, c.name, c.type, idx + 1, now);
+    allCoaches.push({ id: coachId, train_id: train.id, coach_number: c.name, coach_type: c.type });
+    
+    let zones = [];
+    if (c.name.startsWith('DMC')) {
+      zones = [
+        { name: 'CRW MCB Panel', type: 'Electrical' },
+        { name: 'Contactor panel', type: 'Electrical' },
+        { name: 'MCC', type: 'Electrical' },
+        { name: 'Transformer Name Plate side', type: 'Transformer' },
+        { name: 'TF Radiator side', type: 'Transformer' },
+        { name: 'TF Terminal side1(Outer Side)', type: 'Transformer' },
+        { name: 'TF Terminal side2(Inner Side)', type: 'Transformer' },
+        { name: 'Women Compartment LHS Panel', type: 'Electrical' },
+        { name: 'Women Compartment RHS Panel', type: 'Electrical' }
+      ];
+    } else if (c.name.startsWith('DPC')) {
+      zones = [
+        { name: 'Control Panel Upper', type: 'Electrical' },
+        { name: 'Control Panel Lower', type: 'Electrical' },
+        { name: 'Contactor panel', type: 'Electrical' },
+        { name: 'Engine Room End Panel', type: 'Engine' },
+        { name: 'Rectifier Terminal', type: 'Electrical' },
+        { name: 'Auxiliary Power Converter', type: 'Electrical' },
+        { name: 'Traction Converter Unit', type: 'Traction' },
+        { name: 'Women Compartment LHS Panel', type: 'Electrical' },
+        { name: 'Women Compartment RHS Panel', type: 'Electrical' }
+      ];
+    } else if (c.name.startsWith('TC')) {
+      zones = [
+        { name: 'AE Side', type: 'Axle Box' },
+        { name: 'NAE Side', type: 'Axle Box' }
+      ];
+    } else {
+      zones = [
+        { name: 'Switchboard Panel', type: 'Electrical' },
+        { name: 'Axle Box Left', type: 'Axle Box' },
+        { name: 'Axle Box Right', type: 'Axle Box' }
+      ];
+    }
+
     zones.forEach(z => {
       const zoneId = uuidv4();
-      insertZone.run(zoneId, coachId, z.name, z.type, z.min, z.max, z.warn, z.crit, now);
-      allZones.push({ id: zoneId, coach_id: coachId, zone_name: z.name, warning_threshold: z.warn, critical_threshold: z.crit, normal_min: z.min, normal_max: z.max });
+      insertZone.run(zoneId, coachId, z.name, z.type, 20.0, 60.0, 25.0, 25.0, now);
+      allZones.push({ id: zoneId, coach_id: coachId, zone_name: z.name, warning_threshold: 25.0, critical_threshold: 25.0, normal_min: 20.0, normal_max: 60.0 });
     });
   });
 });
 console.log(`✅ Coaches & Zones seeded: ${allCoaches.length} coaches, ${allZones.length} zones`);
 
 // ─── 5. KPI TARGETS ─────────────────────────────────────────────────────────
-const inspectors = users.filter(u => u.role === 'inspector');
+const inspectors = users.filter(u => u.role === 'ground_engineer');
 const insertKpi = db.prepare(`INSERT OR IGNORE INTO kpi_targets (id, inspector_id, target_inspections_per_day, deadline_hour, effective_from, created_by, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)`);
 inspectors.forEach(ins => insertKpi.run(uuidv4(), ins.id, 3, 17, today, users[0].id, now));
 console.log('✅ KPI targets seeded');

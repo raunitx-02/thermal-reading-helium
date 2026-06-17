@@ -1,33 +1,35 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { useModal } from '../../contexts/ModalContext';
 import api from '../../api';
-import { Users, MapPin, Plus, Search, RefreshCw, Edit, Bell, LogOut, ChevronRight, X } from 'lucide-react';
+import { Users, MapPin, Plus, Search, RefreshCw, Edit, Bell, LogOut, ChevronRight, X, Power, Check, ChevronDown, Mail, Phone, Briefcase } from 'lucide-react';
 
-const RAILWAY_ZONES = [
-  'Central Railway (CR) - Mumbai',
-  'East Central Railway (ECR) - Hajipur',
-  'East Coast Railway (ECoR) - Bhubaneswar',
-  'Eastern Railway (ER) - Kolkata',
-  'North Central Railway (NCR) - Prayagraj',
-  'North Eastern Railway (NER) - Gorakhpur',
-  'Northeast Frontier Railway (NFR) - Maligaon, Guwahati',
-  'Northern Railway (NR) - New Delhi',
-  'North Western Railway (NWR) - Jaipur',
-  'South Central Railway (SCR) - Secunderabad',
-  'South East Central Railway (SECR) - Bilaspur',
-  'South Eastern Railway (SER) - Garden Reach, Kolkata',
-  'South Western Railway (SWR) - Hubballi',
-  'Southern Railway (SR) - Chennai',
-  'West Central Railway (WCR) - Jabalpur',
-  'Western Railway (WR) - Mumbai Central',
-  'Metro Railway, Kolkata - Kolkata',
-  'South Coast Railway (SCoR) - Visakhapatnam'
+const RAILWAY_ZONES_PARSED = [
+  { acronym: 'CR', name: 'Central Railway', division: 'Mumbai', value: 'Central Railway (CR) - Mumbai' },
+  { acronym: 'ECR', name: 'East Central Railway', division: 'Hajipur', value: 'East Central Railway (ECR) - Hajipur' },
+  { acronym: 'ECoR', name: 'East Coast Railway', division: 'Bhubaneswar', value: 'East Coast Railway (ECoR) - Bhubaneswar' },
+  { acronym: 'ER', name: 'Eastern Railway', division: 'Kolkata', value: 'Eastern Railway (ER) - Kolkata' },
+  { acronym: 'NCR', name: 'North Central Railway', division: 'Prayagraj', value: 'North Central Railway (NCR) - Prayagraj' },
+  { acronym: 'NER', name: 'North Eastern Railway', division: 'Gorakhpur', value: 'North Eastern Railway (NER) - Gorakhpur' },
+  { acronym: 'NFR', name: 'Northeast Frontier Railway', division: 'Maligaon, Guwahati', value: 'Northeast Frontier Railway (NFR) - Maligaon, Guwahati' },
+  { acronym: 'NR', name: 'Northern Railway', division: 'New Delhi', value: 'Northern Railway (NR) - New Delhi' },
+  { acronym: 'NWR', name: 'North Western Railway', division: 'Jaipur', value: 'North Western Railway (NWR) - Jaipur' },
+  { acronym: 'SCR', name: 'South Central Railway', division: 'Secunderabad', value: 'South Central Railway (SCR) - Secunderabad' },
+  { acronym: 'SECR', name: 'South East Central Railway', division: 'Bilaspur', value: 'South East Central Railway (SECR) - Bilaspur' },
+  { acronym: 'SER', name: 'South Eastern Railway', division: 'Garden Reach, Kolkata', value: 'South Eastern Railway (SER) - Garden Reach, Kolkata' },
+  { acronym: 'SWR', name: 'South Western Railway', division: 'Hubballi', value: 'South Western Railway (SWR) - Hubballi' },
+  { acronym: 'SR', name: 'Southern Railway', division: 'Chennai', value: 'Southern Railway (SR) - Chennai' },
+  { acronym: 'WCR', name: 'West Central Railway', division: 'Jabalpur', value: 'West Central Railway (WCR) - Jabalpur' },
+  { acronym: 'WR', name: 'Western Railway', division: 'Mumbai Central', value: 'Western Railway (WR) - Mumbai Central' },
+  { acronym: 'Metro', name: 'Metro Railway, Kolkata', division: 'Kolkata', value: 'Metro Railway, Kolkata - Kolkata' },
+  { acronym: 'SCoR', name: 'South Coast Railway', division: 'Visakhapatnam', value: 'South Coast Railway (SCoR) - Visakhapatnam' }
 ];
 
 export default function SuperAdminDashboard() {
   const { logout } = useAuth();
   const navigate = useNavigate();
+  const { showAlert, showConfirm } = useModal();
 
   const [branchAdmins, setBranchAdmins] = useState([]);
   const [states, setStates] = useState([]);
@@ -55,6 +57,39 @@ export default function SuperAdminDashboard() {
   // Stats Modal states
   const [showStatsModal, setShowStatsModal] = useState(false);
   const [expandedState, setExpandedState] = useState(null);
+
+  // Searchable dropdown states
+  const [zoneDropdownOpen, setZoneDropdownOpen] = useState(false);
+  const [zoneSearchText, setZoneSearchText] = useState('');
+
+  const [stateDropdownOpen, setStateDropdownOpen] = useState(false);
+  const [stateSearchText, setStateSearchText] = useState('');
+
+  const [districtDropdownOpen, setDistrictDropdownOpen] = useState(false);
+  const [districtSearchText, setDistrictSearchText] = useState('');
+
+  // Depo Officers popup states
+  const [selectedDepo, setSelectedDepo] = useState(null);
+  const [depoOfficers, setDepoOfficers] = useState([]);
+  const [loadingOfficers, setLoadingOfficers] = useState(false);
+  const [showDepoModal, setShowDepoModal] = useState(false);
+
+  useEffect(() => {
+    if (!zoneDropdownOpen && !stateDropdownOpen && !districtDropdownOpen) return;
+    const handleOutsideClick = (e) => {
+      if (zoneDropdownOpen && !e.target.closest('.zone-dropdown-container')) {
+        setZoneDropdownOpen(false);
+      }
+      if (stateDropdownOpen && !e.target.closest('.state-dropdown-container')) {
+        setStateDropdownOpen(false);
+      }
+      if (districtDropdownOpen && !e.target.closest('.district-dropdown-container')) {
+        setDistrictDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, [zoneDropdownOpen, stateDropdownOpen, districtDropdownOpen]);
 
   const fetchStates = async () => {
     try {
@@ -126,6 +161,14 @@ export default function SuperAdminDashboard() {
   };
 
   const handleLogout = async () => {
+    const confirmed = await showConfirm(
+      'Confirm Logout',
+      'Are you sure you want to log out of the system?',
+      'confirm',
+      'Yes, Logout',
+      'Cancel'
+    );
+    if (!confirmed) return;
     await logout();
     navigate('/login');
   };
@@ -133,7 +176,7 @@ export default function SuperAdminDashboard() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!branchName || !selectedZone || !name || !email || (!editingAdmin && !password) || !selectedState || !selectedCity) {
-      alert('Please fill out all required fields');
+      showAlert('Required Fields', 'Please fill out all required fields', 'warning');
       return;
     }
 
@@ -151,7 +194,7 @@ export default function SuperAdminDashboard() {
           city: selectedCity
         });
         if (res.data.success) {
-          alert('Branch Admin updated successfully');
+          showAlert('Success', 'Branch Admin updated successfully', 'success');
           setShowModal(false);
           fetchBranchAdmins();
         }
@@ -169,13 +212,13 @@ export default function SuperAdminDashboard() {
           city: selectedCity
         });
         if (res.data.success) {
-          alert('Branch Admin appointed successfully');
+          showAlert('Success', 'Branch Admin appointed successfully', 'success');
           setShowModal(false);
           fetchBranchAdmins();
         }
       }
     } catch (err) {
-      alert(err.response?.data?.message || 'Action failed');
+      showAlert('Error', err.response?.data?.message || 'Action failed', 'error');
     }
   };
 
@@ -205,12 +248,64 @@ export default function SuperAdminDashboard() {
     setShowModal(true);
   };
 
+  const handleShowDepoOfficers = async (admin) => {
+    setSelectedDepo(admin.division);
+    setShowDepoModal(true);
+    setLoadingOfficers(true);
+    try {
+      const res = await api.get(`/users?division=${encodeURIComponent(admin.division)}`);
+      if (res.data.success) {
+        const officers = res.data.data.filter(u => u.role === 'branch_admin');
+        setDepoOfficers(officers);
+      }
+    } catch (_) {
+      setDepoOfficers([]);
+    }
+    setLoadingOfficers(false);
+  };
+
+  const handleToggleActive = async (admin) => {
+    const actionText = admin.is_active === 1 ? 'deactivate' : 'activate';
+    const confirmed = await showConfirm(
+      'Confirm Action',
+      `Are you sure you want to ${actionText} this branch admin?`,
+      'warning',
+      'Yes, Proceed',
+      'Cancel'
+    );
+    if (!confirmed) return;
+
+    try {
+      const res = await api.put(`/users/${admin.id}/toggle-active`);
+      if (res.data.success) {
+        showAlert('Success', res.data.message, 'success');
+        fetchBranchAdmins();
+      }
+    } catch (err) {
+      showAlert('Error', err.response?.data?.message || 'Action failed', 'error');
+    }
+  };
+
   const filteredAdmins = branchAdmins.filter(admin => 
     admin.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     admin.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
     admin.city?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     admin.division?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     admin.zone?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const filteredZones = RAILWAY_ZONES_PARSED.filter(z => 
+    z.acronym.toLowerCase().includes(zoneSearchText.toLowerCase()) ||
+    z.name.toLowerCase().includes(zoneSearchText.toLowerCase()) ||
+    z.division.toLowerCase().includes(zoneSearchText.toLowerCase())
+  );
+
+  const filteredStates = states.filter(s => 
+    s.toLowerCase().includes(stateSearchText.toLowerCase())
+  );
+
+  const filteredDistricts = districts.filter(d => 
+    d.toLowerCase().includes(districtSearchText.toLowerCase())
   );
 
   // Group branch admins state-wise and district-wise
@@ -262,7 +357,7 @@ export default function SuperAdminDashboard() {
       `}</style>
 
       {/* Title & Actions */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 pb-4">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-200 pb-4">
         <div>
           <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Heat flow Management and Analysis</h1>
           <p className="text-slate-500 text-sm mt-1">Monitor Every Steps Smartly</p>
@@ -337,7 +432,7 @@ export default function SuperAdminDashboard() {
         >
           <div className="flex items-start justify-between gap-3">
             <div>
-              <span className="text-[10px] md:text-xs text-slate-500 font-bold uppercase tracking-wider block">Branch Admins Appointed</span>
+              <span className="text-[10px] md:text-xs text-slate-500 font-bold uppercase tracking-wider block">Branch Admins Created</span>
               <span className="text-[9px] text-blue-500 font-bold opacity-0 group-hover:opacity-100 transition-opacity mt-0.5 block">View Distribution &rarr;</span>
             </div>
             <div className="flex items-center justify-center w-10 h-10 rounded-lg border shrink-0 bg-blue-50 text-blue-600 border-blue-100 group-hover:scale-110 transition-transform">
@@ -399,22 +494,49 @@ export default function SuperAdminDashboard() {
               </thead>
               <tbody>
                 {filteredAdmins.map((admin) => (
-                  <tr key={admin.id} className="border-b border-slate-100 hover:bg-slate-50/50">
-                    <td className="p-4 font-bold text-slate-900">{admin.name}</td>
+                  <tr key={admin.id} className={`border-b border-slate-100 hover:bg-slate-50/50 ${admin.is_active === 0 ? 'bg-slate-50/70 opacity-60' : ''}`}>
+                    <td className="p-4 font-bold text-slate-900">
+                      <div className="flex items-center gap-2">
+                        {admin.name}
+                        {admin.is_active === 0 && (
+                          <span className="px-1.5 py-0.5 text-[9px] bg-red-100 text-red-600 rounded font-semibold uppercase">Deactivated</span>
+                        )}
+                      </div>
+                    </td>
                     <td className="p-4 font-mono">{admin.email}</td>
-                    <td className="p-4 font-bold text-blue-600">{admin.division || 'N/A'}</td>
+                    <td className="p-4">
+                      <button
+                        onClick={() => handleShowDepoOfficers(admin)}
+                        className="font-bold text-blue-600 hover:text-blue-800 hover:underline cursor-pointer text-left focus:outline-none"
+                      >
+                        {admin.division || 'N/A'}
+                      </button>
+                    </td>
                     <td className="p-4 font-semibold text-slate-700">{admin.zone || 'N/A'}</td>
                     <td className="p-4 font-medium text-slate-700">{admin.state || 'N/A'}</td>
                     <td className="p-4 font-medium text-slate-700">{admin.city || 'N/A'}</td>
                     <td className="p-4 text-slate-500">{admin.phone || 'N/A'}</td>
                     <td className="p-4 text-center">
-                      <button
-                        onClick={() => startEdit(admin)}
-                        className="p-1.5 hover:bg-slate-100 text-slate-500 hover:text-blue-600 rounded-lg transition"
-                        title="Edit Details"
-                      >
-                        <Edit className="w-4 h-4" />
-                      </button>
+                      <div className="flex items-center justify-center gap-1.5">
+                        <button
+                          onClick={() => startEdit(admin)}
+                          className="p-1.5 hover:bg-slate-100 text-slate-500 hover:text-blue-600 rounded-lg transition"
+                          title="Edit Details"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleToggleActive(admin)}
+                          className={`p-1.5 rounded-lg transition ${
+                            admin.is_active === 1 
+                              ? 'text-red-500 hover:bg-red-50 hover:text-red-650' 
+                              : 'text-emerald-500 hover:bg-emerald-50 hover:text-emerald-650'
+                          }`}
+                          title={admin.is_active === 1 ? 'Deactivate Admin' : 'Activate Admin'}
+                        >
+                          <Power className="w-4 h-4" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -429,7 +551,7 @@ export default function SuperAdminDashboard() {
         <div className="fixed inset-0 bg-slate-900/40 flex items-center justify-center p-4 z-50 overflow-y-auto">
           <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-lg shadow-2xl p-6 relative my-8">
             <h2 className="text-xl font-bold text-slate-900 border-b border-slate-100 pb-3">
-              {editingAdmin ? 'Edit Administrator Details' : 'Appoint Branch Administrator'}
+              {editingAdmin ? 'Edit Administrator Details' : 'Fill the Admin Details'}
             </h2>
             <form onSubmit={handleSubmit} className="space-y-4 mt-4">
               <div>
@@ -444,19 +566,85 @@ export default function SuperAdminDashboard() {
                 />
               </div>
 
-              <div>
+              <div className="relative zone-dropdown-container">
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Select Zone</label>
-                <select
-                  required
-                  value={selectedZone}
-                  onChange={(e) => setSelectedZone(e.target.value)}
-                  className="w-full border border-slate-200 rounded-lg p-2.5 text-xs focus:outline-none bg-white"
+                <button
+                  type="button"
+                  onClick={() => setZoneDropdownOpen(!zoneDropdownOpen)}
+                  className="w-full flex items-center justify-between border border-slate-200 rounded-lg p-2.5 text-xs bg-white focus:outline-none focus:border-blue-500 text-left h-10"
                 >
-                  <option value="" disabled>-- Choose Zone --</option>
-                  {RAILWAY_ZONES.map(z => (
-                    <option key={z} value={z}>{z}</option>
-                  ))}
-                </select>
+                  <div className="flex items-center gap-2 text-slate-700 truncate pr-4">
+                    <Search className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                    <span className="truncate">
+                      {selectedZone ? (
+                        (() => {
+                          const found = RAILWAY_ZONES_PARSED.find(z => z.value === selectedZone);
+                          return found ? `${found.acronym} • ${found.name} (${found.division})` : selectedZone;
+                        })()
+                      ) : (
+                        <span className="text-slate-400">Search or Select Zone...</span>
+                      )}
+                    </span>
+                  </div>
+                  <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 shrink-0 ${zoneDropdownOpen ? 'rotate-180' : ''}`} />
+                </button>
+
+                {zoneDropdownOpen && (
+                  <div className="absolute left-0 right-0 mt-1.5 bg-white border border-slate-200 rounded-xl shadow-xl p-3 z-50 flex flex-col max-h-64 animate-ios-spring">
+                    {/* Search Input */}
+                    <div className="relative mb-2 shrink-0">
+                      <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
+                      <input
+                        type="text"
+                        placeholder="Type zone name or acronym..."
+                        value={zoneSearchText}
+                        onChange={(e) => setZoneSearchText(e.target.value)}
+                        className="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-lg text-xs bg-slate-50/50 focus:outline-none focus:border-blue-500 focus:bg-white h-9"
+                      />
+                    </div>
+
+                    {/* Options List */}
+                    <div className="flex-1 overflow-y-auto space-y-1 custom-scrollbar pr-1">
+                      {filteredZones.length === 0 ? (
+                        <div className="text-center py-4 text-slate-400 text-xs">No zones match your search</div>
+                      ) : (
+                        filteredZones.map((z) => {
+                          const isSelected = selectedZone === z.value;
+                          return (
+                            <button
+                              key={z.value}
+                              type="button"
+                              onClick={() => {
+                                setSelectedZone(z.value);
+                                setZoneDropdownOpen(false);
+                                setZoneSearchText('');
+                              }}
+                              className={`w-full flex items-center justify-between text-left p-2.5 rounded-lg text-xs transition-colors border ${
+                                isSelected
+                                  ? 'bg-blue-50/65 text-blue-600 border-blue-200 font-semibold shadow-sm'
+                                  : 'hover:bg-slate-50 text-slate-700 border-transparent'
+                              }`}
+                            >
+                              <div className="flex items-center gap-2.5 w-full">
+                                {isSelected && <Check className="w-3.5 h-3.5 text-blue-600 shrink-0" />}
+                                <div className="truncate">
+                                  <div className="flex items-center gap-1.5 truncate">
+                                    <span className="font-extrabold text-blue-600 uppercase tracking-wide shrink-0">{z.acronym}</span>
+                                    <span className="text-slate-400 shrink-0">•</span>
+                                    <span className="font-semibold text-slate-800 truncate">{z.name}</span>
+                                  </div>
+                                  <div className="text-[10px] text-slate-400 italic mt-0.5 truncate">
+                                    ({z.division})
+                                  </div>
+                                </div>
+                              </div>
+                            </button>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div>
@@ -507,37 +695,139 @@ export default function SuperAdminDashboard() {
                 />
               </div>
 
-              {/* State & City selectors (Cascading simple dropdowns) */}
+              {/* State & City selectors (Cascading custom dropdowns) */}
               <div className="grid grid-cols-2 gap-4 border-t border-slate-100 pt-4">
-                <div>
+                <div className="relative state-dropdown-container">
                   <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Select State</label>
-                  <select
-                    required
-                    value={selectedState}
-                    onChange={(e) => setSelectedState(e.target.value)}
-                    className="w-full border border-slate-200 rounded-lg p-2.5 text-xs focus:outline-none bg-white"
+                  <button
+                    type="button"
+                    onClick={() => setStateDropdownOpen(!stateDropdownOpen)}
+                    className="w-full flex items-center justify-between border border-slate-200 rounded-lg p-2.5 text-xs bg-white focus:outline-none focus:border-blue-500 text-left h-10"
                   >
-                    <option value="" disabled>-- Choose State --</option>
-                    {states.map(s => (
-                      <option key={s} value={s}>{s}</option>
-                    ))}
-                  </select>
+                    <div className="flex items-center gap-2 text-slate-700 truncate pr-4">
+                      <Search className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                      <span className="truncate font-semibold">
+                        {selectedState || <span className="text-slate-400 font-normal">Search or Select State...</span>}
+                      </span>
+                    </div>
+                    <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 shrink-0 ${stateDropdownOpen ? 'rotate-180' : ''}`} />
+                  </button>
+
+                  {stateDropdownOpen && (
+                    <div className="absolute left-0 right-0 mt-1.5 bg-white border border-slate-200 rounded-xl shadow-xl p-3 z-50 flex flex-col max-h-64 animate-ios-spring">
+                      {/* Search Input */}
+                      <div className="relative mb-2 shrink-0">
+                        <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
+                        <input
+                          type="text"
+                          placeholder="Type state name..."
+                          value={stateSearchText}
+                          onChange={(e) => setStateSearchText(e.target.value)}
+                          className="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-lg text-xs bg-slate-50/50 focus:outline-none focus:border-blue-500 focus:bg-white h-9"
+                        />
+                      </div>
+
+                      {/* Options List */}
+                      <div className="flex-1 overflow-y-auto space-y-1 custom-scrollbar pr-1">
+                        {filteredStates.length === 0 ? (
+                          <div className="text-center py-4 text-slate-400 text-xs">No states match your search</div>
+                        ) : (
+                          filteredStates.map((s) => {
+                            const isSelected = selectedState === s;
+                            return (
+                              <button
+                                key={s}
+                                type="button"
+                                onClick={() => {
+                                  setSelectedState(s);
+                                  setStateDropdownOpen(false);
+                                  setStateSearchText('');
+                                }}
+                                className={`w-full flex items-center justify-between text-left p-2.5 rounded-lg text-xs transition-colors border ${
+                                  isSelected
+                                    ? 'bg-blue-50/65 text-blue-600 border-blue-200 font-bold shadow-sm'
+                                    : 'hover:bg-slate-50 text-slate-700 border-transparent font-semibold'
+                                }`}
+                              >
+                                <div className="flex items-center gap-2.5 w-full">
+                                  {isSelected && <Check className="w-3.5 h-3.5 text-blue-600 shrink-0" />}
+                                  <span className="truncate">{s}</span>
+                                </div>
+                              </button>
+                            );
+                          })
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
-                <div>
+                <div className="relative district-dropdown-container">
                   <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Select District/City</label>
-                  <select
-                    required
-                    value={selectedCity}
+                  <button
+                    type="button"
                     disabled={!selectedState}
-                    onChange={(e) => setSelectedCity(e.target.value)}
-                    className="w-full border border-slate-200 rounded-lg p-2.5 text-xs focus:outline-none bg-white"
+                    onClick={() => setDistrictDropdownOpen(!districtDropdownOpen)}
+                    className={`w-full flex items-center justify-between border border-slate-200 rounded-lg p-2.5 text-xs focus:outline-none focus:border-blue-500 text-left h-10 ${
+                      !selectedState ? 'bg-slate-50 cursor-not-allowed text-slate-400' : 'bg-white text-slate-700'
+                    }`}
                   >
-                    <option value="" disabled>-- Choose District --</option>
-                    {districts.map(d => (
-                      <option key={d} value={d}>{d}</option>
-                    ))}
-                  </select>
+                    <div className="flex items-center gap-2 truncate pr-4">
+                      <Search className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                      <span className="truncate font-semibold">
+                        {selectedCity || <span className="text-slate-400 font-normal">Search or Select District...</span>}
+                      </span>
+                    </div>
+                    <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 shrink-0 ${districtDropdownOpen ? 'rotate-180' : ''}`} />
+                  </button>
+
+                  {districtDropdownOpen && selectedState && (
+                    <div className="absolute left-0 right-0 mt-1.5 bg-white border border-slate-200 rounded-xl shadow-xl p-3 z-50 flex flex-col max-h-64 animate-ios-spring">
+                      {/* Search Input */}
+                      <div className="relative mb-2 shrink-0">
+                        <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
+                        <input
+                          type="text"
+                          placeholder="Type district name..."
+                          value={districtSearchText}
+                          onChange={(e) => setDistrictSearchText(e.target.value)}
+                          className="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-lg text-xs bg-slate-50/50 focus:outline-none focus:border-blue-500 focus:bg-white h-9"
+                        />
+                      </div>
+
+                      {/* Options List */}
+                      <div className="flex-1 overflow-y-auto space-y-1 custom-scrollbar pr-1">
+                        {filteredDistricts.length === 0 ? (
+                          <div className="text-center py-4 text-slate-400 text-xs">No districts match your search</div>
+                        ) : (
+                          filteredDistricts.map((d) => {
+                            const isSelected = selectedCity === d;
+                            return (
+                              <button
+                                key={d}
+                                type="button"
+                                onClick={() => {
+                                  setSelectedCity(d);
+                                  setDistrictDropdownOpen(false);
+                                  setDistrictSearchText('');
+                                }}
+                                className={`w-full flex items-center justify-between text-left p-2.5 rounded-lg text-xs transition-colors border ${
+                                  isSelected
+                                    ? 'bg-blue-50/65 text-blue-600 border-blue-200 font-bold shadow-sm'
+                                    : 'hover:bg-slate-50 text-slate-700 border-transparent font-semibold'
+                                }`}
+                              >
+                                <div className="flex items-center gap-2.5 w-full">
+                                  {isSelected && <Check className="w-3.5 h-3.5 text-blue-600 shrink-0" />}
+                                  <span className="truncate">{d}</span>
+                                </div>
+                              </button>
+                            );
+                          })
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -631,6 +921,93 @@ export default function SuperAdminDashboard() {
             <div className="border-t border-slate-100 pt-4 mt-4 text-center shrink-0">
               <button 
                 onClick={() => { setShowStatsModal(false); setExpandedState(null); }}
+                className="w-full py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-colors"
+              >
+                Close List
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Depo Officers List Modal */}
+      {showDepoModal && (
+        <div className="fixed inset-0 bg-slate-950/40 backdrop-blur-md flex items-center justify-center p-4 z-50 transition-opacity duration-300">
+          <div className="bg-white border border-slate-100 rounded-3xl w-full max-w-lg shadow-2xl p-6 relative overflow-hidden transition-all transform scale-100 animate-ios-spring flex flex-col max-h-[80vh]">
+            
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-slate-100 pb-4 shrink-0">
+              <div>
+                <h2 className="text-xl font-bold text-slate-900 tracking-tight">{selectedDepo} Depo Administrators</h2>
+                <p className="text-xs text-slate-400 mt-0.5">List of all active branch administrators assigned to this depo</p>
+              </div>
+              <button 
+                onClick={() => { setShowDepoModal(false); setDepoOfficers([]); }} 
+                className="p-1.5 hover:bg-slate-100 rounded-full transition text-slate-400 hover:text-slate-900"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="flex-1 overflow-y-auto pr-1 mt-4 custom-scrollbar">
+              {loadingOfficers ? (
+                <div className="text-center py-12 text-slate-400 text-xs">
+                  Fetching depo administrators...
+                </div>
+              ) : depoOfficers.length === 0 ? (
+                <div className="text-center py-12 text-slate-400 text-xs">
+                  No branch administrators appointed to this depo yet.
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {depoOfficers.map((officer) => {
+                    const initials = officer.name
+                      ? officer.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()
+                      : 'U';
+                    
+                    return (
+                      <div 
+                        key={officer.id} 
+                        className="flex items-center justify-between p-3.5 bg-slate-50/50 hover:bg-slate-50 border border-slate-100 rounded-2xl transition duration-200"
+                      >
+                        <div className="flex items-center gap-3.5 min-w-0">
+                          {/* Blue colored Avatar for Branch Admins */}
+                          <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-xs uppercase shrink-0 bg-blue-50 border border-blue-100 text-blue-600 shadow-sm shadow-blue-100/50">
+                            {initials}
+                          </div>
+                          
+                          <div className="min-w-0">
+                            <h4 className="font-extrabold text-slate-800 text-sm tracking-tight truncate">{officer.name}</h4>
+                            <div className="flex flex-col gap-0.5 mt-1">
+                              <span className="text-[10px] text-slate-400 font-semibold flex items-center gap-1">
+                                <Mail className="w-3 h-3 text-slate-350" /> {officer.email}
+                              </span>
+                              {officer.phone && (
+                                <span className="text-[10px] text-slate-400 font-semibold flex items-center gap-1">
+                                  <Phone className="w-3 h-3 text-slate-350" /> {officer.phone}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {/* Role Badge */}
+                        <div className="shrink-0 pl-2">
+                          <span className="px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-blue-100/65 text-blue-700">
+                            Branch Admin
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="border-t border-slate-100 pt-4 mt-4 text-center shrink-0">
+              <button 
+                onClick={() => { setShowDepoModal(false); setDepoOfficers([]); }}
                 className="w-full py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-colors"
               >
                 Close List
