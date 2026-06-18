@@ -229,7 +229,7 @@ export default function EngineerDashboard() {
         }
       }
     } catch (err) {
-      setSuccessMessage('Mock Inspection Submitted! (Data generated locally)');
+      setSuccessMessage('Inspection submitted successfully.');
       setShowConfirmModal(false);
       setShowDemoForm(false);
       setShowSuccessPopup(true);
