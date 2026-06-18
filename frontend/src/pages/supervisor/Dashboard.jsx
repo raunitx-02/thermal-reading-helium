@@ -180,8 +180,8 @@ export default function SupervisorDashboard() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 pb-4">
         <div>
-          <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Supervisor Dashboard</h1>
-          <p className="text-slate-500 text-sm mt-1">Track daily inspections, download colourful PDF reports, and supervise ground activities</p>
+          <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Dashboard</h1>
+          <p className="text-slate-500 text-sm mt-1">Monitor, Review, Approve Smartly</p>
         </div>
         <div className="flex items-center gap-3 relative">
           <div className="bg-white border border-slate-200 rounded-lg p-1 flex gap-1 shadow-sm">
