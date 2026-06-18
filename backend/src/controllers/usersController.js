@@ -11,13 +11,21 @@ exports.getAll = async (req, res, next) => {
     if (role) { query += ' AND role = ?'; params.push(role); }
     if (division) { query += ' AND division = ?'; params.push(division); }
     if (parent_id) { 
-      query += ` AND (
-        parent_id = ? 
-        OR (parent_id IN (SELECT id FROM users WHERE parent_id = ?) AND (SELECT role FROM users WHERE id = ?) = 'branch_admin')
-        OR (parent_id = (SELECT parent_id FROM users WHERE id = ?) AND (SELECT role FROM users WHERE id = ?) = 'supervisor')
-        OR (parent_id IN (SELECT id FROM users WHERE parent_id = (SELECT parent_id FROM users WHERE id = ?)) AND (SELECT role FROM users WHERE id = ?) = 'supervisor')
-      )`; 
-      params.push(parent_id, parent_id, parent_id, parent_id, parent_id, parent_id, parent_id); 
+      if (req.user.role === 'supervisor') {
+        query += ' AND parent_id = ?';
+        params.push(req.user.id);
+      } else if (req.user.role === 'branch_admin') {
+        query += ' AND (parent_id = ? OR parent_id IN (SELECT id FROM users WHERE parent_id = ?))';
+        params.push(parent_id, parent_id);
+      } else {
+        query += ` AND (
+          parent_id = ? 
+          OR (parent_id IN (SELECT id FROM users WHERE parent_id = ?) AND (SELECT role FROM users WHERE id = ?) = 'branch_admin')
+          OR (parent_id = (SELECT parent_id FROM users WHERE id = ?) AND (SELECT role FROM users WHERE id = ?) = 'supervisor')
+          OR (parent_id IN (SELECT id FROM users WHERE parent_id = (SELECT parent_id FROM users WHERE id = ?)) AND (SELECT role FROM users WHERE id = ?) = 'supervisor')
+        )`; 
+        params.push(parent_id, parent_id, parent_id, parent_id, parent_id, parent_id, parent_id); 
+      }
     }
     if (search) { query += ' AND (name LIKE ? OR email LIKE ? OR employee_id LIKE ? OR division LIKE ? OR zone LIKE ?)'; params.push(`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`); }
     query += ' ORDER BY created_at DESC';

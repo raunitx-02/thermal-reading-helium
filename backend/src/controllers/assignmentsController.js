@@ -42,6 +42,18 @@ exports.getAll = async (req, res, next) => {
     `;
     const params = [];
 
+    // Role-based filtering
+    if (req.user.role === 'supervisor') {
+      query += ' AND a.supervisor_id = ?';
+      params.push(req.user.id);
+    } else if (req.user.role === 'ground_engineer') {
+      query += ' AND a.ground_engineer_id = ?';
+      params.push(req.user.id);
+    } else if (req.user.role === 'branch_admin') {
+      query += ' AND (a.supervisor_id IN (SELECT id FROM users WHERE parent_id = ?))';
+      params.push(req.user.id);
+    }
+
     if (ground_engineer_id) {
       query += ' AND a.ground_engineer_id = ?';
       params.push(ground_engineer_id);
