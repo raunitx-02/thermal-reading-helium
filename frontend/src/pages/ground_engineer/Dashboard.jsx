@@ -55,6 +55,7 @@ export default function EngineerDashboard() {
   const [showDemoForm, setShowDemoForm] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
   const [activeDemoRake, setActiveDemoRake] = useState(null);
   const [demoZones, setDemoZones] = useState([
     { id: 1, coach: 'DMC1', zone: 'CRW MCB Panel', ambient: '0', max: '31.5', notes: 'Acceptable' },
@@ -220,6 +221,7 @@ export default function EngineerDashboard() {
         });
         
         if (submitRes.data.success) {
+          setSuccessMessage('Your inspection logs have been locked & synced successfully.');
           setShowConfirmModal(false);
           setShowDemoForm(false);
           setShowSuccessPopup(true);
@@ -227,6 +229,7 @@ export default function EngineerDashboard() {
         }
       }
     } catch (err) {
+      setSuccessMessage('Mock Inspection Submitted! (Data generated locally)');
       setShowConfirmModal(false);
       setShowDemoForm(false);
       setShowSuccessPopup(true);
@@ -523,7 +526,7 @@ export default function EngineerDashboard() {
             </div>
             <div className="space-y-1">
               <h3 className="text-base font-extrabold text-slate-900">Report Submitted</h3>
-              <p className="text-xs text-slate-500 font-medium">Your inspection logs have been locked & synced successfully.</p>
+              <p className="text-xs text-slate-500 font-medium">{successMessage}</p>
             </div>
             <button
               onClick={() => setShowSuccessPopup(false)}
