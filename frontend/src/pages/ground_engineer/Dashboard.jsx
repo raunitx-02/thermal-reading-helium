@@ -8,6 +8,17 @@ import { Train, Play, RefreshCw, ClipboardList, AlertCircle, Bell, LogOut, X, Ch
 export default function EngineerDashboard() {
   const { user, logout } = useAuth();
   const { showConfirm } = useModal();
+  const renderRise = (rise) => {
+    const formatted = rise.toFixed(1);
+    if (rise > 10) {
+      return <span className="text-red-650 text-red-650 font-bold text-red-600">+{formatted}°C</span>;
+    } else if (rise < 0) {
+      return <span className="text-emerald-600 font-bold">{formatted}°C</span>;
+    } else {
+      return <span className="text-slate-750 font-bold">{formatted}°C</span>;
+    }
+  };
+  
   const [assignments, setAssignments] = useState(() => {
     try {
       const email = user?.email || 'guest';
@@ -429,7 +440,7 @@ export default function EngineerDashboard() {
                             className="w-16 bg-slate-50 border border-slate-200 rounded p-1 text-center font-bold text-xs focus:outline-none focus:bg-white focus:border-blue-500"
                           />
                         </td>
-                        <td className="p-3 text-center font-bold text-slate-750">{rise.toFixed(1)}°C</td>
+                        <td className="p-3 text-center">{renderRise(rise)}</td>
                         <td className="p-3 text-center">
                           <span className={`px-2 py-0.5 rounded text-[8px] font-extrabold uppercase border ${statusColor}`}>
                             {statusLabel}
@@ -479,7 +490,7 @@ export default function EngineerDashboard() {
                     <span>{dz.coach.split(' ')[0]}</span>
                     <span className="truncate">{dz.zone}</span>
                     <span className="text-center">{dz.max}°C</span>
-                    <span className={`text-right ${rise > 40 ? 'text-red-600' : ''}`}>{rise.toFixed(1)}°C</span>
+                    <span className="text-right">{renderRise(rise)}</span>
                   </div>
                 );
               })}
