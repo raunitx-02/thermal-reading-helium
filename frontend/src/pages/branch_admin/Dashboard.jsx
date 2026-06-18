@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '../../api';
 import { useAuth } from '../../contexts/AuthContext';
 import { useModal } from '../../contexts/ModalContext';
-import { Users, UserPlus, RefreshCw, Trash2, Edit, Search, ShieldCheck, ChevronDown, Check, Bell, LogOut } from 'lucide-react';
+import { Users, UserPlus, RefreshCw, Trash2, Edit, Search, ShieldCheck, ChevronDown, Check, Bell, LogOut, Eye, EyeOff } from 'lucide-react';
 
 export default function BranchAdminDashboard() {
   const { user, logout } = useAuth();
@@ -50,6 +50,7 @@ export default function BranchAdminDashboard() {
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [role, setRole] = useState('supervisor');
   const [roleDropdownOpen, setRoleDropdownOpen] = useState(false);
 
@@ -188,6 +189,7 @@ export default function BranchAdminDashboard() {
     setLastName(names.slice(1).join(' ') || '');
     setEmail(member.email);
     setPassword('');
+    setShowPassword(false);
     setPhone(member.phone || '');
     setRole(member.role || 'supervisor');
     setRoleDropdownOpen(false);
@@ -200,6 +202,7 @@ export default function BranchAdminDashboard() {
     setLastName('');
     setEmail('');
     setPassword('');
+    setShowPassword(false);
     setPhone('');
     setRole('supervisor');
     setRoleDropdownOpen(false);
@@ -536,14 +539,24 @@ export default function BranchAdminDashboard() {
 
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Password</label>
-                <input
-                  type="password"
-                  required={!editingSupervisor}
-                  placeholder={editingSupervisor ? 'Enter new password (optional)' : 'Enter secure password'}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full border border-slate-200 rounded-lg p-2.5 text-xs focus:outline-none focus:border-blue-500"
-                />
+                <div className="relative">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    required={!editingSupervisor}
+                    placeholder={editingSupervisor ? 'Enter new password (optional)' : 'Enter secure password'}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full border border-slate-200 rounded-lg pl-2.5 pr-10 py-2.5 text-xs focus:outline-none focus:border-blue-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-650 transition flex items-center"
+                    title={showPassword ? 'Hide Password' : 'Show Password'}
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
               </div>
 
               <div className="flex gap-3 justify-end pt-4 border-t border-slate-100">
