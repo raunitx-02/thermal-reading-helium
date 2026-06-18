@@ -77,7 +77,7 @@ export default function Sidebar() {
 
   const supervisorLinks = [
     { to: '/supervisor/dashboard', label: 'Inspections Logs', icon: LayoutDashboard },
-    { to: '/supervisor/ground-engineers', label: 'Ground Engineers', icon: Users },
+    { to: '/supervisor/ground-engineers', label: 'Ground Team', icon: Users },
     { to: '/supervisor/assignments', label: 'Assign Rakes', icon: FileSpreadsheet },
     { to: '/supervisor/trains', label: 'Configure Rakes', icon: Train }
   ];

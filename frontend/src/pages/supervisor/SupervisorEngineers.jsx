@@ -54,7 +54,7 @@ export default function SupervisorEngineers() {
           employee_id: null
         });
         if (res.data.success) {
-          showAlert('Success', 'Ground Engineer updated successfully', 'success');
+          showAlert('Success', 'Team member updated successfully', 'success');
           setShowModal(false);
           fetchEngineers();
         }
@@ -70,7 +70,7 @@ export default function SupervisorEngineers() {
           parent_id: user.id
         });
         if (res.data.success) {
-          showAlert('Success', 'Ground Engineer added successfully', 'success');
+          showAlert('Success', 'Team member added successfully', 'success');
           setShowModal(false);
           fetchEngineers();
         }
@@ -104,7 +104,7 @@ export default function SupervisorEngineers() {
   const handleDeactivate = async (id) => {
     const confirmed = await showConfirm(
       'Confirm Action',
-      'Are you sure you want to deactivate this Ground Engineer?',
+      'Are you sure you want to deactivate this team member?',
       'warning',
       'Yes, Deactivate',
       'Cancel'
@@ -113,7 +113,7 @@ export default function SupervisorEngineers() {
     try {
       const res = await api.delete(`/users/${id}`);
       if (res.data.success) {
-        showAlert('Success', 'Ground Engineer deactivated', 'success');
+        showAlert('Success', 'Team member deactivated', 'success');
         fetchEngineers();
       }
     } catch (_) {}
@@ -129,12 +129,12 @@ export default function SupervisorEngineers() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 pb-4">
         <div>
-          <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Ground Engineers Management</h1>
-          <p className="text-slate-500 text-sm mt-1">Supervise and appoint Ground Engineers for bogie inspections</p>
+          <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Ground Team Management</h1>
+          <p className="text-slate-500 text-sm mt-1">Supervise and appoint Ground Team members for bogie inspections</p>
         </div>
         <div className="flex items-center gap-3">
           <button onClick={startAdd} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm rounded-lg px-4 py-2.5 transition shadow-sm">
-            <UserPlus className="w-4 h-4" /> Add Ground Engineer
+            <UserPlus className="w-4 h-4" /> Add Ground Team
           </button>
           <button onClick={fetchEngineers} className="p-2.5 bg-white border border-slate-200 text-slate-650 hover:text-slate-900 rounded-lg transition shadow-sm">
             <RefreshCw className="w-4 h-4" />
@@ -145,7 +145,7 @@ export default function SupervisorEngineers() {
       {/* Main List */}
       <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <h2 className="font-semibold text-lg text-slate-900">Active Engineers Under You</h2>
+          <h2 className="font-semibold text-lg text-slate-900">Active Team Members Under You</h2>
           <div className="relative w-full sm:w-72">
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
             <input
@@ -161,7 +161,7 @@ export default function SupervisorEngineers() {
         {loading ? (
           <p className="text-slate-400 text-xs text-center py-12">Loading engineers...</p>
         ) : filtered.length === 0 ? (
-          <p className="text-slate-400 text-xs text-center py-12">No ground engineers appointed yet</p>
+          <p className="text-slate-400 text-xs text-center py-12">No team members appointed yet</p>
         ) : (
           <div className="overflow-x-auto border border-slate-100 rounded-lg">
             <table className="w-full text-left text-xs border-collapse">
@@ -206,7 +206,7 @@ export default function SupervisorEngineers() {
         <div className="fixed inset-0 bg-slate-900/40 flex items-center justify-center p-4 z-50 overflow-y-auto">
           <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-md shadow-2xl p-6 relative">
             <h2 className="text-xl font-bold text-slate-900 border-b border-slate-100 pb-3">
-              {editingEngineer ? 'Edit Engineer Details' : 'Add Ground Engineer'}
+              {editingEngineer ? 'Edit Team Member Details' : 'Add Ground Team Member'}
             </h2>
             <form onSubmit={handleSubmit} className="space-y-4 mt-4">
               <div className="grid grid-cols-2 gap-4">
