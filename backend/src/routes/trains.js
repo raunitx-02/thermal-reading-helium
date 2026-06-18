@@ -6,7 +6,8 @@ const auditMiddleware = require('../middleware/audit');
 const multer = require('multer');
 const path = require('path');
 
-const upload = multer({ dest: path.join(__dirname, '../../uploads/') });
+const uploadDir = process.env.VERCEL ? '/tmp/uploads' : path.join(__dirname, '../../uploads/');
+const upload = multer({ dest: uploadDir });
 
 router.use(authMiddleware());
 

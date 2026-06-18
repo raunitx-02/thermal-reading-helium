@@ -5,7 +5,7 @@ const authMiddleware = require('../middleware/auth');
 
 router.use(authMiddleware('admin'));
 
-router.get('/', (req, res, next) => {
+router.get('/', async (req, res, next) => {
   try {
     const db = getDb();
     const { action, search } = req.query;
@@ -27,7 +27,7 @@ router.get('/', (req, res, next) => {
     }
     query += ' ORDER BY al.created_at DESC LIMIT 200';
     
-    const logs = db.prepare(query).all(...params);
+    const logs = await db.prepare(query).all(...params);
     res.json({ success: true, data: logs });
   } catch (err) { next(err); }
 });

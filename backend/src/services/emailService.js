@@ -26,7 +26,7 @@ function getTransporter() {
 exports.sendAlertEmail = async (zone, temperature, status) => {
   try {
     const db = getDb();
-    const enabled = db.prepare("SELECT value FROM system_settings WHERE key = 'email_alerts_enabled'").get()?.value === 'true';
+    const enabled = (await db.prepare("SELECT value FROM system_settings WHERE key = 'email_alerts_enabled'").get())?.value === 'true';
     if (!enabled) return;
 
     const smtpUser = process.env.SMTP_USER;
@@ -39,7 +39,7 @@ exports.sendAlertEmail = async (zone, temperature, status) => {
     if (!client) return;
 
     // Get all admin emails
-    const admins = db.prepare("SELECT email FROM users WHERE role = 'admin' AND is_active = 1").all();
+    const admins = await db.prepare("SELECT email FROM users WHERE role = 'admin' AND is_active = 1").all();
     if (!admins.length) return;
 
     const emailList = admins.map(a => a.email).join(', ');

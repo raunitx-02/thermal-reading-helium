@@ -8,9 +8,36 @@ import { Train, Play, RefreshCw, ClipboardList, AlertCircle, Bell, LogOut, X, Ch
 export default function EngineerDashboard() {
   const { user, logout } = useAuth();
   const { showConfirm } = useModal();
-  const [assignments, setAssignments] = useState([]);
-  const [drafts, setDrafts] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [assignments, setAssignments] = useState(() => {
+    try {
+      const email = user?.email || 'guest';
+      const cached = localStorage.getItem(`cache_${email}_assignments`);
+      return cached ? JSON.parse(cached) : [];
+    } catch (_) {
+      return [];
+    }
+  });
+  const [drafts, setDrafts] = useState(() => {
+    try {
+      const email = user?.email || 'guest';
+      const cached = localStorage.getItem(`cache_${email}_drafts`);
+      return cached ? JSON.parse(cached) : [];
+    } catch (_) {
+      return [];
+    }
+  });
+  const [loading, setLoading] = useState(() => {
+    try {
+      const email = user?.email || 'guest';
+      const cachedA = localStorage.getItem(`cache_${email}_assignments`);
+      const cachedD = localStorage.getItem(`cache_${email}_drafts`);
+      const hasA = cachedA ? JSON.parse(cachedA).length > 0 : false;
+      const hasD = cachedD ? JSON.parse(cachedD).length > 0 : false;
+      return !(hasA || hasD);
+    } catch (_) {
+      return true;
+    }
+  });
   const navigate = useNavigate();
 
   // Demo modal states
@@ -34,7 +61,15 @@ export default function EngineerDashboard() {
   ]);
 
   // Notifications state
-  const [notifications, setNotifications] = useState([]);
+  const [notifications, setNotifications] = useState(() => {
+    try {
+      const email = user?.email || 'guest';
+      const cached = localStorage.getItem(`cache_${email}_notifications`);
+      return cached ? JSON.parse(cached) : [];
+    } catch (_) {
+      return [];
+    }
+  });
   const [showNotif, setShowNotif] = useState(false);
 
   useEffect(() => {
@@ -51,7 +86,11 @@ export default function EngineerDashboard() {
   const fetchNotifs = async () => {
     try {
       const res = await api.get('/notifications');
-      if (res.data.success) setNotifications(res.data.data);
+      if (res.data.success) {
+        setNotifications(res.data.data);
+        const email = user?.email || 'guest';
+        localStorage.setItem(`cache_${email}_notifications`, JSON.stringify(res.data.data));
+      }
     } catch (_) {}
   };
 
@@ -66,7 +105,12 @@ export default function EngineerDashboard() {
   const handleMarkRead = async () => {
     try {
       await api.put('/notifications/read-all');
-      setNotifications(prev => prev.map(n => ({ ...n, is_read: 1 })));
+      setNotifications(prev => {
+        const updated = prev.map(n => ({ ...n, is_read: 1 }));
+        const email = user?.email || 'guest';
+        localStorage.setItem(`cache_${email}_notifications`, JSON.stringify(updated));
+        return updated;
+      });
     } catch (_) {}
   };
 
@@ -84,28 +128,25 @@ export default function EngineerDashboard() {
   };
 
   const fetchEngineerData = async () => {
-    setLoading(true);
+    if (assignments.length === 0 && drafts.length === 0) {
+      setLoading(true);
+    }
     try {
       const [assignRes, draftRes] = await Promise.all([
         api.get(`/assignments?ground_engineer_id=${user.id}&status=assigned`),
         api.get(`/sessions?status=draft&inspector_id=${user.id}`)
       ]);
+      const email = user?.email || 'guest';
       if (assignRes.data.success) {
-        let list = assignRes.data.data;
-        const demoAssignment = {
-          id: 'demo-assignment-id',
-          train_id: 'demo-train-id',
-          train_number: '218113 / 208272 / 218114',
-          train_name: 'MEMU',
-          route: 'Mumbai City Branch',
-          status: 'assigned'
-        };
-        if (!list.some(a => a.id === 'demo-assignment-id')) {
-          list = [demoAssignment, ...list];
-        }
+        const list = assignRes.data.data;
         setAssignments(list);
+        localStorage.setItem(`cache_${email}_assignments`, JSON.stringify(list));
       }
-      if (draftRes.data.success) setDrafts(draftRes.data.data);
+      if (draftRes.data.success) {
+        const dList = draftRes.data.data;
+        setDrafts(dList);
+        localStorage.setItem(`cache_${email}_drafts`, JSON.stringify(dList));
+      }
     } catch (_) {}
     setLoading(false);
   };

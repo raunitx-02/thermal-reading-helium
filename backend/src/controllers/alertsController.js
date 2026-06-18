@@ -1,6 +1,6 @@
 const { getDb } = require('../config/database');
 
-exports.getAlerts = (req, res, next) => {
+exports.getAlerts = async (req, res, next) => {
   try {
     const db = getDb();
     const { is_acknowledged, alert_type, train_id } = req.query;
@@ -35,29 +35,29 @@ exports.getAlerts = (req, res, next) => {
     }
     query += ' ORDER BY a.created_at DESC';
     
-    const alerts = db.prepare(query).all(...params);
+    const alerts = await db.prepare(query).all(...params);
     res.json({ success: true, data: alerts });
   } catch (err) { next(err); }
 };
 
-exports.acknowledgeAlert = (req, res, next) => {
+exports.acknowledgeAlert = async (req, res, next) => {
   try {
     const { id } = req.params;
     const db = getDb();
     
-    const alert = db.prepare('SELECT * FROM alerts WHERE id = ?').get(id);
+    const alert = await db.prepare('SELECT * FROM alerts WHERE id = ?').get(id);
     if (!alert) return res.status(404).json({ success: false, message: 'Alert not found' });
     if (alert.is_acknowledged) return res.status(400).json({ success: false, message: 'Alert already acknowledged' });
     
     const now = Math.floor(Date.now() / 1000);
-    db.prepare(`
+    await db.prepare(`
       UPDATE alerts 
       SET is_acknowledged = 1, acknowledged_by = ?, acknowledged_at = ?
       WHERE id = ?
     `).run(req.user.id, now, id);
     
     // Log audit log
-    db.prepare(`
+    await db.prepare(`
       INSERT INTO audit_logs (id, user_id, action, entity_type, entity_id, details, ip_address, created_at)
       VALUES (?, ?, 'ACKNOWLEDGE_ALERT', 'alert', ?, ?, ?, ?)
     `).run(

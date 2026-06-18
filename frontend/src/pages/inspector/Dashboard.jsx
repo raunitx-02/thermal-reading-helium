@@ -1,23 +1,62 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../api';
+import { useAuth } from '../../contexts/AuthContext';
 import { Train, Plus, RefreshCw, Calendar, ClipboardList } from 'lucide-react';
 
 export default function InspectorDashboard() {
-  const [trains, setTrains] = useState([]);
-  const [drafts, setDrafts] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
+  const [trains, setTrains] = useState(() => {
+    try {
+      const email = user?.email || 'guest';
+      const cached = localStorage.getItem(`cache_${email}_inspector_trains`);
+      return cached ? JSON.parse(cached) : [];
+    } catch (_) {
+      return [];
+    }
+  });
+  const [drafts, setDrafts] = useState(() => {
+    try {
+      const email = user?.email || 'guest';
+      const cached = localStorage.getItem(`cache_${email}_inspector_drafts`);
+      return cached ? JSON.parse(cached) : [];
+    } catch (_) {
+      return [];
+    }
+  });
+  const [loading, setLoading] = useState(() => {
+    try {
+      const email = user?.email || 'guest';
+      const trainsCache = localStorage.getItem(`cache_${email}_inspector_trains`);
+      const draftsCache = localStorage.getItem(`cache_${email}_inspector_drafts`);
+      const hasTrains = trainsCache ? JSON.parse(trainsCache).length > 0 : false;
+      const hasDrafts = draftsCache ? JSON.parse(draftsCache).length > 0 : false;
+      return !(hasTrains || hasDrafts);
+    } catch (_) {
+      return true;
+    }
+  });
   const navigate = useNavigate();
 
   const fetchInspectorData = async () => {
-    setLoading(true);
+    const hasCached = (trains && trains.length > 0) || (drafts && drafts.length > 0);
+    if (!hasCached) {
+      setLoading(true);
+    }
     try {
       const [trainRes, sessionRes] = await Promise.all([
         api.get('/trains'),
         api.get('/sessions?status=draft')
       ]);
-      if (trainRes.data.success) setTrains(trainRes.data.data);
-      if (sessionRes.data.success) setDrafts(sessionRes.data.data);
+      const email = user?.email || 'guest';
+      if (trainRes.data.success) {
+        setTrains(trainRes.data.data);
+        localStorage.setItem(`cache_${email}_inspector_trains`, JSON.stringify(trainRes.data.data));
+      }
+      if (sessionRes.data.success) {
+        setDrafts(sessionRes.data.data);
+        localStorage.setItem(`cache_${email}_inspector_drafts`, JSON.stringify(sessionRes.data.data));
+      }
     } catch (_) {}
     setLoading(false);
   };

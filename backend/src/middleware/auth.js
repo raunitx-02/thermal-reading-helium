@@ -1,7 +1,7 @@
 const jwt = require('jsonwebtoken');
 const { getDb } = require('../config/database');
 
-const authMiddleware = (requiredRole = null) => (req, res, next) => {
+const authMiddleware = (requiredRole = null) => async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -11,7 +11,7 @@ const authMiddleware = (requiredRole = null) => (req, res, next) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
     const db = getDb();
-    const user = db.prepare('SELECT id, name, email, role, division, is_active FROM users WHERE id = ?').get(decoded.userId);
+    const user = await db.prepare('SELECT id, name, email, role, division, is_active FROM users WHERE id = ?').get(decoded.userId);
     if (!user || !user.is_active) {
       return res.status(401).json({ success: false, message: 'User not found or inactive' });
     }

@@ -7,8 +7,24 @@ import { Train, Plus, RefreshCw, Trash2, Shield, Search } from 'lucide-react';
 export default function BranchTrainsManager() {
   const { user } = useAuth();
   const { showAlert, showConfirm } = useModal();
-  const [trains, setTrains] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [trains, setTrains] = useState(() => {
+    try {
+      const email = user?.email || 'guest';
+      const cached = localStorage.getItem(`cache_${email}_branch_trains`);
+      return cached ? JSON.parse(cached) : [];
+    } catch (_) {
+      return [];
+    }
+  });
+  const [loading, setLoading] = useState(() => {
+    try {
+      const email = user?.email || 'guest';
+      const cached = localStorage.getItem(`cache_${email}_branch_trains`);
+      return cached ? false : true;
+    } catch (_) {
+      return true;
+    }
+  });
   const [searchTerm, setSearchTerm] = useState('');
 
   // Modal form states
@@ -22,11 +38,15 @@ export default function BranchTrainsManager() {
   const [showFrequencyDropdown, setShowFrequencyDropdown] = useState(false);
 
   const fetchBranchTrains = async () => {
-    setLoading(true);
+    if (!trains || trains.length === 0) {
+      setLoading(true);
+    }
     try {
-      const res = await api.get(`/trains?created_by=${user.id}`);
+      const res = await api.get(`/trains?created_by=${user?.id}`);
       if (res.data.success) {
         setTrains(res.data.data);
+        const email = user?.email || 'guest';
+        localStorage.setItem(`cache_${email}_branch_trains`, JSON.stringify(res.data.data));
       }
     } catch (_) {}
     setLoading(false);

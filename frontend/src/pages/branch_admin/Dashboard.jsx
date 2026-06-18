@@ -9,13 +9,37 @@ export default function BranchAdminDashboard() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const { showAlert, showConfirm } = useModal();
-  const [staff, setStaff] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [staff, setStaff] = useState(() => {
+    try {
+      const cacheKey = user?.id ? `cache_branch_admin_staff_${user.id}` : 'cache_branch_admin_staff';
+      const cached = localStorage.getItem(cacheKey);
+      return cached ? JSON.parse(cached) : [];
+    } catch (_) {
+      return [];
+    }
+  });
+  const [loading, setLoading] = useState(() => {
+    try {
+      const cacheKey = user?.id ? `cache_branch_admin_staff_${user.id}` : 'cache_branch_admin_staff';
+      const cached = localStorage.getItem(cacheKey);
+      return !cached || JSON.parse(cached).length === 0;
+    } catch (_) {
+      return true;
+    }
+  });
   const [searchTerm, setSearchTerm] = useState('');
   const [activeRoleFilter, setActiveRoleFilter] = useState(null);
 
   // Notifications state
-  const [notifications, setNotifications] = useState([]);
+  const [notifications, setNotifications] = useState(() => {
+    try {
+      const cacheKey = user?.id ? `cache_branch_admin_notifications_${user.id}` : 'cache_branch_admin_notifications';
+      const cached = localStorage.getItem(cacheKey);
+      return cached ? JSON.parse(cached) : [];
+    } catch (_) {
+      return [];
+    }
+  });
   const [showNotif, setShowNotif] = useState(false);
 
   // Modal form states
@@ -54,7 +78,11 @@ export default function BranchAdminDashboard() {
   const fetchNotifs = async () => {
     try {
       const res = await api.get('/notifications');
-      if (res.data.success) setNotifications(res.data.data);
+      if (res.data.success) {
+        setNotifications(res.data.data);
+        const cacheKey = user?.id ? `cache_branch_admin_notifications_${user.id}` : 'cache_branch_admin_notifications';
+        localStorage.setItem(cacheKey, JSON.stringify(res.data.data));
+      }
     } catch (_) {}
   };
 
@@ -87,12 +115,17 @@ export default function BranchAdminDashboard() {
   };
 
   const fetchStaff = async () => {
-    setLoading(true);
+    const cacheKey = user?.id ? `cache_branch_admin_staff_${user.id}` : 'cache_branch_admin_staff';
+    const cachedData = localStorage.getItem(cacheKey);
+    if (!cachedData || JSON.parse(cachedData).length === 0) {
+      setLoading(true);
+    }
     try {
       // Fetch both supervisors and ground engineers created by this branch admin
       const res = await api.get(`/users?parent_id=${user.id}`);
       if (res.data.success) {
         setStaff(res.data.data);
+        localStorage.setItem(cacheKey, JSON.stringify(res.data.data));
       }
     } catch (_) {}
     setLoading(false);

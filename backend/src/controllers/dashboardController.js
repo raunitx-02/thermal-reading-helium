@@ -1,29 +1,29 @@
 const { getDb } = require('../config/database');
 
-exports.getSummary = (req, res, next) => {
+exports.getSummary = async (req, res, next) => {
   try {
     const db = getDb();
     const today = new Date().toISOString().split('T')[0];
     
     // Total Active Trains
-    const totalTrains = db.prepare("SELECT COUNT(*) as cnt FROM trains WHERE is_active = 1").get().cnt;
+    const totalTrains = (await db.prepare("SELECT COUNT(*) as cnt FROM trains WHERE is_active = 1").get()).cnt;
     
     // Total inspections submitted today
-    const completedInspections = db.prepare(`
+    const completedInspections = (await db.prepare(`
       SELECT COUNT(*) as cnt FROM inspection_sessions 
       WHERE inspection_date = ? AND status = 'submitted'
-    `).get(today).cnt;
+    `).get(today)).cnt;
     
     // Pending inspections (active trains not inspected today)
     const pendingInspections = Math.max(0, totalTrains - completedInspections);
     
     // Active / Unacknowledged alerts today
-    const activeAlerts = db.prepare("SELECT COUNT(*) as cnt FROM alerts WHERE is_acknowledged = 0").get().cnt;
+    const activeAlerts = (await db.prepare("SELECT COUNT(*) as cnt FROM alerts WHERE is_acknowledged = 0").get()).cnt;
     
     // Average Compliance rate of inspectors
-    const avgCompliance = db.prepare(`
+    const avgCompliance = (await db.prepare(`
       SELECT AVG(compliance_rate) as avg_comp FROM kpi_records WHERE date = ?
-    `).get(today).avg_comp || 100.0;
+    `).get(today)).avg_comp || 100.0;
     
     res.json({
       success: true,
@@ -38,7 +38,7 @@ exports.getSummary = (req, res, next) => {
   } catch (err) { next(err); }
 };
 
-exports.getCharts = (req, res, next) => {
+exports.getCharts = async (req, res, next) => {
   try {
     const db = getDb();
     const days = parseInt(req.query.days || '7');
@@ -52,8 +52,8 @@ exports.getCharts = (req, res, next) => {
     }
     
     // 1. Daily Inspection Activity Trend
-    const trendData = dates.map(date => {
-      const stats = db.prepare(`
+    const trendData = await Promise.all(dates.map(async (date) => {
+      const stats = await db.prepare(`
         SELECT 
           COUNT(CASE WHEN status = 'submitted' THEN 1 END) as completed,
           COUNT(CASE WHEN status = 'draft' THEN 1 END) as drafts
@@ -61,9 +61,9 @@ exports.getCharts = (req, res, next) => {
         WHERE inspection_date = ?
       `).get(date);
       
-      const alerts = db.prepare(`
+      const alerts = (await db.prepare(`
         SELECT COUNT(*) as cnt FROM alerts WHERE date(created_at, 'unixepoch') = ?
-      `).get(date).cnt;
+      `).get(date)).cnt;
       
       return {
         date,
@@ -71,17 +71,17 @@ exports.getCharts = (req, res, next) => {
         drafts: stats.drafts || 0,
         alerts: alerts || 0
       };
-    });
+    }));
     
     // 2. Alert Type Distribution (Warning vs Critical)
-    const alertDistribution = db.prepare(`
+    const alertDistribution = await db.prepare(`
       SELECT alert_type as name, COUNT(*) as value 
       FROM alerts 
       GROUP BY alert_type
     `).all();
     
     // 3. Worst performing trains (most alerts)
-    const worstTrains = db.prepare(`
+    const worstTrains = await db.prepare(`
       SELECT t.train_number || ' - ' || t.train_name as name, COUNT(a.id) as value
       FROM alerts a
       JOIN trains t ON a.train_id = t.id

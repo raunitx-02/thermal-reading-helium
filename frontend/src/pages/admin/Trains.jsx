@@ -1,10 +1,32 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../api';
+import { useAuth } from '../../contexts/AuthContext';
 import { Train, Plus, Trash2, Edit2, Upload, FileSpreadsheet, AlertCircle, RefreshCw, X } from 'lucide-react';
 
 export default function Trains() {
-  const [trains, setTrains] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
+  const [trains, setTrains] = useState(() => {
+    try {
+      const email = user?.email || 'guest';
+      const cached = localStorage.getItem(`cache_${email}_trains`);
+      return cached ? JSON.parse(cached) : [];
+    } catch (_) {
+      return [];
+    }
+  });
+  const [loading, setLoading] = useState(() => {
+    try {
+      const email = user?.email || 'guest';
+      const cached = localStorage.getItem(`cache_${email}_trains`);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        return !(Array.isArray(parsed) && parsed.length > 0);
+      }
+      return true;
+    } catch (_) {
+      return true;
+    }
+  });
   const [activeTab, setActiveTab] = useState('list'); // 'list', 'coaches'
   
   // Selected Train for details
@@ -25,10 +47,28 @@ export default function Trains() {
   const [importMessage, setImportMessage] = useState('');
 
   const fetchTrains = async () => {
-    setLoading(true);
+    let hasCache = false;
+    try {
+      const email = user?.email || 'guest';
+      const cached = localStorage.getItem(`cache_${email}_trains`);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          hasCache = true;
+        }
+      }
+    } catch (_) {}
+
+    if (!hasCache) {
+      setLoading(true);
+    }
     try {
       const res = await api.get('/trains');
-      if (res.data.success) setTrains(res.data.data);
+      if (res.data.success) {
+        setTrains(res.data.data);
+        const email = user?.email || 'guest';
+        localStorage.setItem(`cache_${email}_trains`, JSON.stringify(res.data.data));
+      }
     } catch (_) {}
     setLoading(false);
   };

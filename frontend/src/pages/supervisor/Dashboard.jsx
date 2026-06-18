@@ -9,10 +9,25 @@ export default function SupervisorDashboard() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const { showConfirm } = useModal();
-  const [engineers, setEngineers] = useState([]);
-  const [trains, setTrains] = useState([]);
-  const [inspections, setInspections] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const getCacheOrFallback = (key, fallback) => {
+    try {
+      const email = user?.email || 'guest';
+      const cache = localStorage.getItem(`cache_${email}_${key}`);
+      return cache ? JSON.parse(cache) : fallback;
+    } catch (_) {
+      return fallback;
+    }
+  };
+
+  const [engineers, setEngineers] = useState(() => getCacheOrFallback('engineers', []));
+  const [trains, setTrains] = useState(() => getCacheOrFallback('trains', []));
+  const [inspections, setInspections] = useState(() => getCacheOrFallback('inspections', []));
+  const [loading, setLoading] = useState(() => {
+    const cachedEngineers = getCacheOrFallback('engineers', []);
+    const cachedTrains = getCacheOrFallback('trains', []);
+    const cachedInspections = getCacheOrFallback('inspections', []);
+    return !(cachedEngineers.length > 0 || cachedTrains.length > 0 || cachedInspections.length > 0);
+  });
 
   // Time filter state
   const [timeFilter, setTimeFilter] = useState('today'); // 'today', 'weekly', 'monthly', 'custom'
@@ -21,7 +36,7 @@ export default function SupervisorDashboard() {
   // Custom Calendar state
   const [showCalendar, setShowCalendar] = useState(false);
   const [calendarMonth, setCalendarMonth] = useState(new Date());
-  const [selectedCustomDate, setSelectedCustomDate] = useState('');
+  const [customRange, setCustomRange] = useState({ from: '', to: '' });
 
   // Notifications state
   const [notifications, setNotifications] = useState([]);
@@ -74,18 +89,30 @@ export default function SupervisorDashboard() {
   };
 
   const fetchSupervisorData = async () => {
-    setLoading(true);
+    const hasCache = engineers.length > 0 || trains.length > 0 || inspections.length > 0;
+    if (!hasCache) {
+      setLoading(true);
+    }
     try {
-      const todayStr = new Date().toISOString().split('T')[0];
       const [engRes, trainRes, inspectRes] = await Promise.all([
         api.get(`/users?role=ground_engineer&parent_id=${user.id}`),
         api.get('/trains'),
         api.get('/sessions?status=submitted')
       ]);
 
-      if (engRes.data.success) setEngineers(engRes.data.data);
-      if (trainRes.data.success) setTrains(trainRes.data.data);
-      if (inspectRes.data.success) setInspections(inspectRes.data.data);
+      const email = user?.email || 'guest';
+      if (engRes.data.success) {
+        setEngineers(engRes.data.data);
+        localStorage.setItem(`cache_${email}_engineers`, JSON.stringify(engRes.data.data));
+      }
+      if (trainRes.data.success) {
+        setTrains(trainRes.data.data);
+        localStorage.setItem(`cache_${email}_trains`, JSON.stringify(trainRes.data.data));
+      }
+      if (inspectRes.data.success) {
+        setInspections(inspectRes.data.data);
+        localStorage.setItem(`cache_${email}_inspections`, JSON.stringify(inspectRes.data.data));
+      }
     } catch (_) {}
     setLoading(false);
   };
@@ -116,7 +143,12 @@ export default function SupervisorDashboard() {
         const diff = (now - date) / (1000 * 3600 * 24);
         return diff <= 30;
       } else if (timeFilter === 'custom') {
-        return i.inspection_date === selectedCustomDate;
+        if (customRange.from && customRange.to) {
+          return i.inspection_date >= customRange.from && i.inspection_date <= customRange.to;
+        } else if (customRange.from) {
+          return i.inspection_date === customRange.from;
+        }
+        return true;
       }
       return true;
     });
@@ -166,7 +198,13 @@ export default function SupervisorDashboard() {
               onClick={() => setShowCalendar(true)}
               className={`px-3 py-1.5 rounded-md text-xs font-semibold uppercase tracking-wider transition flex items-center gap-1 ${timeFilter === 'custom' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-900'}`}
             >
-              <span>{timeFilter === 'custom' ? selectedCustomDate : 'Custom Date'}</span>
+              <span>
+                {timeFilter === 'custom'
+                  ? customRange.to && customRange.from !== customRange.to
+                    ? `${customRange.from} to ${customRange.to}`
+                    : customRange.from || 'Custom Date'
+                  : 'Custom Date'}
+              </span>
               <Calendar className="w-3.5 h-3.5" />
             </button>
           </div>
@@ -382,7 +420,6 @@ export default function SupervisorDashboard() {
                 <div key={day} className="py-1">{day}</div>
               ))}
             </div>
-
             {/* Days Grid */}
             <div className="grid grid-cols-7 gap-1">
               {(() => {
@@ -398,27 +435,41 @@ export default function SupervisorDashboard() {
                 }
                 // Month days
                 for (let d = 1; d <= totalDays; d++) {
-                  const dayDate = new Date(year, month, d);
                   const dayStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-                  const isSelected = selectedCustomDate === dayStr;
+                  const isFrom = customRange.from === dayStr;
+                  const isTo = customRange.to === dayStr;
+                  const isInRange = customRange.from && customRange.to && dayStr > customRange.from && dayStr < customRange.to;
                   const isToday = todayStr === dayStr;
+
+                  let dayStyle = 'text-slate-755 hover:bg-slate-100';
+                  if (isFrom || isTo) {
+                    dayStyle = 'bg-blue-600 text-white shadow-md rounded-full font-bold';
+                  } else if (isInRange) {
+                    dayStyle = 'bg-blue-50 text-blue-700 font-bold rounded-none';
+                  } else if (isToday) {
+                    dayStyle = 'border border-blue-500 text-blue-600 hover:bg-blue-50 rounded-full';
+                  } else {
+                    dayStyle += ' rounded-full';
+                  }
 
                   cells.push(
                     <button
                       key={`day-${d}`}
                       type="button"
                       onClick={() => {
-                        setSelectedCustomDate(dayStr);
-                        setTimeFilter('custom');
-                        setShowCalendar(false);
+                        if (!customRange.from || (customRange.from && customRange.to)) {
+                          setCustomRange({ from: dayStr, to: '' });
+                        } else {
+                          if (dayStr < customRange.from) {
+                            setCustomRange({ from: dayStr, to: '' });
+                          } else {
+                            setCustomRange(prev => ({ ...prev, to: dayStr }));
+                            setTimeFilter('custom');
+                            setShowCalendar(false);
+                          }
+                        }
                       }}
-                      className={`py-1.5 text-xs rounded-full font-semibold transition ${
-                        isSelected 
-                          ? 'bg-blue-600 text-white shadow-md' 
-                          : isToday 
-                            ? 'border border-blue-500 text-blue-600 hover:bg-blue-50' 
-                            : 'text-slate-750 hover:bg-slate-100'
-                      }`}
+                      className={`py-1.5 text-xs font-semibold transition ${dayStyle}`}
                     >
                       {d}
                     </button>
@@ -426,6 +477,34 @@ export default function SupervisorDashboard() {
                 }
                 return cells;
               })()}
+            </div>
+
+            {/* Calendar Footer Actions */}
+            <div className="flex items-center justify-between border-t border-slate-100 pt-3 text-[10px]">
+              <button
+                type="button"
+                onClick={() => {
+                  setCustomRange({ from: '', to: '' });
+                  setTimeFilter('today');
+                  setShowCalendar(false);
+                }}
+                className="text-slate-500 hover:text-slate-900 font-bold transition uppercase tracking-wider"
+              >
+                Reset
+              </button>
+              {customRange.from && !customRange.to && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCustomRange(prev => ({ ...prev, to: prev.from }));
+                    setTimeFilter('custom');
+                    setShowCalendar(false);
+                  }}
+                  className="bg-blue-50 text-blue-600 px-2.5 py-1.5 rounded-lg font-extrabold hover:bg-blue-100 transition uppercase tracking-wider"
+                >
+                  Apply Single Day
+                </button>
+              )}
             </div>
           </div>
         </div>

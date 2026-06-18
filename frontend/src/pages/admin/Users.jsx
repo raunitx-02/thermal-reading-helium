@@ -1,10 +1,29 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../api';
+import { useAuth } from '../../contexts/AuthContext';
 import { Plus, Edit2, Trash2, ShieldAlert, Check, RefreshCw, X } from 'lucide-react';
 
 export default function Users() {
-  const [users, setUsers] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
+  const [users, setUsers] = useState(() => {
+    try {
+      const email = user?.email || 'guest';
+      const cached = localStorage.getItem(`cache_${email}_users`);
+      return cached ? JSON.parse(cached) : [];
+    } catch (_) {
+      return [];
+    }
+  });
+  const [loading, setLoading] = useState(() => {
+    try {
+      const email = user?.email || 'guest';
+      const cached = localStorage.getItem(`cache_${email}_users`);
+      const parsed = cached ? JSON.parse(cached) : [];
+      return parsed.length === 0;
+    } catch (_) {
+      return true;
+    }
+  });
   const [modalOpen, setModalOpen] = useState(false);
   const [editUser, setEditUser] = useState(null);
   
@@ -18,10 +37,16 @@ export default function Users() {
   const [isActive, setIsActive] = useState(true);
 
   const fetchUsers = async () => {
-    setLoading(true);
+    if (!users || users.length === 0) {
+      setLoading(true);
+    }
     try {
       const res = await api.get('/users');
-      if (res.data.success) setUsers(res.data.data);
+      if (res.data.success) {
+        setUsers(res.data.data);
+        const email = user?.email || 'guest';
+        localStorage.setItem(`cache_${email}_users`, JSON.stringify(res.data.data));
+      }
     } catch (_) {}
     setLoading(false);
   };

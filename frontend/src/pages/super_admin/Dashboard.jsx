@@ -27,15 +27,47 @@ const RAILWAY_ZONES_PARSED = [
 ];
 
 export default function SuperAdminDashboard() {
-  const { logout } = useAuth();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
   const { showAlert, showConfirm } = useModal();
 
-  const [branchAdmins, setBranchAdmins] = useState([]);
-  const [states, setStates] = useState([]);
+  const [branchAdmins, setBranchAdmins] = useState(() => {
+    try {
+      const email = user?.email || 'guest';
+      const cached = localStorage.getItem(`cache_${email}_branchAdmins`);
+      return cached ? JSON.parse(cached) : [];
+    } catch (_) {
+      return [];
+    }
+  });
+  const [states, setStates] = useState(() => {
+    try {
+      const email = user?.email || 'guest';
+      const cached = localStorage.getItem(`cache_${email}_states`);
+      return cached ? JSON.parse(cached) : [];
+    } catch (_) {
+      return [];
+    }
+  });
   const [districts, setDistricts] = useState([]);
-  const [summary, setSummary] = useState({ totalAdmins: 0, totalCities: 728 });
-  const [loading, setLoading] = useState(true);
+  const [summary, setSummary] = useState(() => {
+    try {
+      const email = user?.email || 'guest';
+      const cached = localStorage.getItem(`cache_${email}_summary`);
+      return cached ? JSON.parse(cached) : { totalAdmins: 0, totalCities: 728 };
+    } catch (_) {
+      return { totalAdmins: 0, totalCities: 728 };
+    }
+  });
+  const [loading, setLoading] = useState(() => {
+    try {
+      const email = user?.email || 'guest';
+      const cached = localStorage.getItem(`cache_${email}_branchAdmins`);
+      return cached ? JSON.parse(cached).length === 0 : true;
+    } catch (_) {
+      return true;
+    }
+  });
 
   // Form states
   const [showModal, setShowModal] = useState(false);
@@ -94,7 +126,11 @@ export default function SuperAdminDashboard() {
   const fetchStates = async () => {
     try {
       const res = await api.get('/geo/states');
-      if (res.data.success) setStates(res.data.data);
+      if (res.data.success) {
+        setStates(res.data.data);
+        const email = user?.email || 'guest';
+        localStorage.setItem(`cache_${email}_states`, JSON.stringify(res.data.data));
+      }
     } catch (_) {}
   };
 
@@ -110,22 +146,37 @@ export default function SuperAdminDashboard() {
   };
 
   const fetchBranchAdmins = async () => {
-    setLoading(true);
+    const hasCache = (() => {
+      try {
+        const email = user?.email || 'guest';
+        const cached = localStorage.getItem(`cache_${email}_branchAdmins`);
+        return cached ? JSON.parse(cached).length > 0 : false;
+      } catch (_) {
+        return false;
+      }
+    })();
+    if (!hasCache) {
+      setLoading(true);
+    }
     try {
       const [userRes, geoSumRes] = await Promise.all([
         api.get('/users?role=branch_admin'),
         api.get('/geo/summary')
       ]);
+      const email = user?.email || 'guest';
       if (userRes.data.success) {
         setBranchAdmins(userRes.data.data);
+        localStorage.setItem(`cache_${email}_branchAdmins`, JSON.stringify(userRes.data.data));
       }
       if (geoSumRes.data.success) {
         const total = geoSumRes.data.data.totalCities || 728;
         const appointed = userRes.data.data.length;
-        setSummary({
+        const newSummary = {
           totalAdmins: appointed,
           totalCities: total
-        });
+        };
+        setSummary(newSummary);
+        localStorage.setItem(`cache_${email}_summary`, JSON.stringify(newSummary));
       }
     } catch (_) {}
     setLoading(false);

@@ -1,10 +1,10 @@
 const { getDb } = require('../config/database');
 const { v4: uuidv4 } = require('uuid');
 
-exports.getTargets = (req, res, next) => {
+exports.getTargets = async (req, res, next) => {
   try {
     const db = getDb();
-    const targets = db.prepare(`
+    const targets = await db.prepare(`
       SELECT kt.*, u.name as inspector_name, u.email as inspector_email
       FROM kpi_targets kt
       JOIN users u ON kt.inspector_id = u.id
@@ -15,7 +15,7 @@ exports.getTargets = (req, res, next) => {
   } catch (err) { next(err); }
 };
 
-exports.setTarget = (req, res, next) => {
+exports.setTarget = async (req, res, next) => {
   try {
     const { inspector_id, target_inspections_per_day, deadline_hour, effective_from } = req.body;
     if (!inspector_id || !target_inspections_per_day || !deadline_hour || !effective_from) {
@@ -26,7 +26,7 @@ exports.setTarget = (req, res, next) => {
     const now = Math.floor(Date.now() / 1000);
     const id = uuidv4();
     
-    db.prepare(`
+    await db.prepare(`
       INSERT INTO kpi_targets (id, inspector_id, target_inspections_per_day, deadline_hour, effective_from, created_by, created_at)
       VALUES (?, ?, ?, ?, ?, ?, ?)
     `).run(id, inspector_id, target_inspections_per_day, deadline_hour, effective_from, req.user.id, now);
@@ -35,13 +35,13 @@ exports.setTarget = (req, res, next) => {
   } catch (err) { next(err); }
 };
 
-exports.getScoreboard = (req, res, next) => {
+exports.getScoreboard = async (req, res, next) => {
   try {
     const db = getDb();
     const { date } = req.query;
     const filterDate = date || new Date().toISOString().split('T')[0];
     
-    const scoreboard = db.prepare(`
+    const scoreboard = await db.prepare(`
       SELECT kr.*, u.name as inspector_name, u.employee_id, u.division,
              COALESCE(
                (SELECT target_inspections_per_day 
@@ -60,12 +60,12 @@ exports.getScoreboard = (req, res, next) => {
   } catch (err) { next(err); }
 };
 
-exports.getInspectorStats = (req, res, next) => {
+exports.getInspectorStats = async (req, res, next) => {
   try {
     const db = getDb();
     const inspectorId = req.params.inspectorId || req.user.id;
     
-    const summary = db.prepare(`
+    const summary = await db.prepare(`
       SELECT 
         SUM(inspections_done) as total_inspections,
         SUM(on_time_count) as total_on_time,
@@ -75,7 +75,7 @@ exports.getInspectorStats = (req, res, next) => {
       WHERE inspector_id = ?
     `).get(inspectorId);
     
-    const history = db.prepare(`
+    const history = await db.prepare(`
       SELECT date, inspections_done, compliance_rate, violations_found
       FROM kpi_records
       WHERE inspector_id = ?

@@ -1,7 +1,7 @@
 const { getDb } = require('../config/database');
 const exportService = require('../services/exportService');
 
-exports.getReportData = (req, res, next) => {
+exports.getReportData = async (req, res, next) => {
   try {
     const db = getDb();
     const { type, startDate, endDate, train_id } = req.query;
@@ -25,7 +25,7 @@ exports.getReportData = (req, res, next) => {
       const params = [startDate, endDate];
       if (train_id) { query += ' AND s.train_id = ?'; params.push(train_id); }
       query += ' ORDER BY s.inspection_date DESC';
-      data = db.prepare(query).all(...params);
+      data = await db.prepare(query).all(...params);
       
     } else if (type === 'alerts') {
       let query = `
@@ -42,10 +42,10 @@ exports.getReportData = (req, res, next) => {
       const params = [startDate, endDate];
       if (train_id) { query += ' AND a.train_id = ?'; params.push(train_id); }
       query += ' ORDER BY a.created_at DESC';
-      data = db.prepare(query).all(...params);
+      data = await db.prepare(query).all(...params);
       
     } else if (type === 'kpi') {
-      data = db.prepare(`
+      data = await db.prepare(`
         SELECT kr.date, kr.inspections_done, kr.on_time_count, kr.violations_found, kr.compliance_rate,
                u.name as inspector_name, u.employee_id
         FROM kpi_records kr
@@ -70,7 +70,7 @@ exports.getReportData = (req, res, next) => {
       const params = [startDate, endDate];
       if (train_id) { query += ' AND t.id = ?'; params.push(train_id); }
       query += ' ORDER BY r.recorded_at DESC LIMIT 500';
-      data = db.prepare(query).all(...params);
+      data = await db.prepare(query).all(...params);
     }
     
     res.json({ success: true, data });
@@ -89,7 +89,7 @@ exports.downloadReport = async (req, res, next) => {
     let records = [];
     
     if (type === 'daily') {
-      records = db.prepare(`
+      records = await db.prepare(`
         SELECT s.inspection_date as date, t.train_number as train, u.name as inspector,
                (SELECT COUNT(*) FROM thermal_readings WHERE session_id = s.id) as readings,
                (SELECT COUNT(*) FROM thermal_readings WHERE session_id = s.id AND status IN ('warning', 'critical')) as violations
@@ -100,7 +100,7 @@ exports.downloadReport = async (req, res, next) => {
         ORDER BY s.inspection_date DESC
       `).all(startDate, endDate);
     } else if (type === 'alerts') {
-      records = db.prepare(`
+      records = await db.prepare(`
         SELECT date(a.created_at, 'unixepoch') as date, t.train_number as train, c.coach_number as coach,
                z.zone_name as zone, a.alert_type as type, a.temperature as temp,
                CASE WHEN a.is_acknowledged = 1 THEN 'Yes' ELSE 'No' END as ack
@@ -112,7 +112,7 @@ exports.downloadReport = async (req, res, next) => {
         ORDER BY a.created_at DESC
       `).all(startDate, endDate);
     } else if (type === 'kpi') {
-      records = db.prepare(`
+      records = await db.prepare(`
         SELECT kr.date, u.name as inspector, kr.inspections_done as inspections,
                kr.violations_found as violations, kr.compliance_rate as compliance
         FROM kpi_records kr
@@ -121,7 +121,7 @@ exports.downloadReport = async (req, res, next) => {
         ORDER BY kr.date DESC
       `).all(startDate, endDate);
     } else {
-      records = db.prepare(`
+      records = await db.prepare(`
         SELECT date(r.recorded_at, 'unixepoch') as date, t.train_number as train, c.coach_number as coach,
                z.zone_name as zone, r.temperature as max_temp, r.ambient_temperature as ambient_temp,
                (r.temperature - r.ambient_temperature) as rise, r.status
@@ -149,12 +149,12 @@ exports.downloadReport = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
-exports.downloadSessionReport = (req, res, next) => {
+exports.downloadSessionReport = async (req, res, next) => {
   try {
     const { sessionId } = req.params;
     const db = getDb();
     
-    const session = db.prepare(`
+    const session = await db.prepare(`
       SELECT s.*, t.train_number, t.train_name, t.route, u.name as inspector_name
       FROM inspection_sessions s
       JOIN trains t ON s.train_id = t.id
@@ -164,7 +164,7 @@ exports.downloadSessionReport = (req, res, next) => {
 
     if (!session) return res.status(404).send('Inspection session not found');
 
-    const readings = db.prepare(`
+    const readings = await db.prepare(`
       SELECT r.*, z.zone_name, z.zone_type, c.coach_number, c.coach_type
       FROM thermal_readings r
       JOIN zones z ON r.zone_id = z.id

@@ -1,9 +1,9 @@
 const { getDb } = require('../config/database');
 
-exports.getNotifications = (req, res, next) => {
+exports.getNotifications = async (req, res, next) => {
   try {
     const db = getDb();
-    const list = db.prepare(`
+    const list = await db.prepare(`
       SELECT * FROM notifications 
       WHERE user_id = ? 
       ORDER BY created_at DESC 
@@ -14,10 +14,10 @@ exports.getNotifications = (req, res, next) => {
   } catch (err) { next(err); }
 };
 
-exports.markAsRead = (req, res, next) => {
+exports.markAsRead = async (req, res, next) => {
   try {
     const db = getDb();
-    db.prepare(`
+    await db.prepare(`
       UPDATE notifications 
       SET is_read = 1 
       WHERE user_id = ?

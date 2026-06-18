@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../api';
+import { useAuth } from '../../contexts/AuthContext';
 import {
   LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
@@ -12,9 +13,26 @@ import {
 const COLORS = ['#ef4444', '#f97316', '#10b981'];
 
 export default function Dashboard() {
-  const [summary, setSummary] = useState(null);
-  const [charts, setCharts] = useState(null);
+  const { user } = useAuth();
   const [days, setDays] = useState(7);
+  const [summary, setSummary] = useState(() => {
+    try {
+      const email = user?.email || 'guest';
+      const cached = localStorage.getItem(`cache_${email}_summary`);
+      return cached ? JSON.parse(cached) : null;
+    } catch (_) {
+      return null;
+    }
+  });
+  const [charts, setCharts] = useState(() => {
+    try {
+      const email = user?.email || 'guest';
+      const cached = localStorage.getItem(`cache_${email}_charts_7`);
+      return cached ? JSON.parse(cached) : null;
+    } catch (_) {
+      return null;
+    }
+  });
   const [loading, setLoading] = useState(true);
 
   const fetchDashboard = async () => {
@@ -24,13 +42,31 @@ export default function Dashboard() {
         api.get('/dashboard/summary'),
         api.get(`/dashboard/charts?days=${days}`)
       ]);
-      if (sumRes.data.success) setSummary(sumRes.data.data);
-      if (chartRes.data.success) setCharts(chartRes.data.data);
+      const email = user?.email || 'guest';
+      if (sumRes.data.success) {
+        setSummary(sumRes.data.data);
+        localStorage.setItem(`cache_${email}_summary`, JSON.stringify(sumRes.data.data));
+      }
+      if (chartRes.data.success) {
+        setCharts(chartRes.data.data);
+        localStorage.setItem(`cache_${email}_charts_${days}`, JSON.stringify(chartRes.data.data));
+      }
     } catch (_) {}
     setLoading(false);
   };
 
   useEffect(() => {
+    try {
+      const email = user?.email || 'guest';
+      const cached = localStorage.getItem(`cache_${email}_charts_${days}`);
+      if (cached) {
+        setCharts(JSON.parse(cached));
+      } else {
+        setCharts(null);
+      }
+    } catch (_) {
+      setCharts(null);
+    }
     fetchDashboard();
   }, [days]);
 

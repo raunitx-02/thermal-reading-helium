@@ -1,30 +1,59 @@
-const { DatabaseSync } = require('node:sqlite');
-const path = require('path');
-const fs = require('fs');
+const { Pool } = require('pg');
 require('dotenv').config();
 
-const DB_PATH = process.env.DB_PATH || './database/thermal.db';
-const dbDir = path.dirname(DB_PATH);
-if (!fs.existsSync(dbDir)) fs.mkdirSync(dbDir, { recursive: true });
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  max: 2, // Keep connection pool small to prevent connection exhaustion on serverless containers
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 2000,
+  ssl: {
+    rejectUnauthorized: false
+  }
+});
 
-let db;
+const queryCache = new Map();
+
+function translateQuery(sql) {
+  if (queryCache.has(sql)) {
+    return queryCache.get(sql);
+  }
+  let index = 1;
+  let translatedSql = sql.replace(/\?/g, () => `$${index++}`);
+  // Replace LIKE with ILIKE for case-insensitive matching in Postgres
+  translatedSql = translatedSql.replace(/\s+LIKE\s+/gi, ' ILIKE ');
+  queryCache.set(sql, translatedSql);
+  return translatedSql;
+}
+
+const dbMock = {
+  prepare: (sql) => {
+    const pgSql = translateQuery(sql);
+    return {
+      all: async (...params) => {
+        const res = await pool.query(pgSql, params);
+        return res.rows;
+      },
+      get: async (...params) => {
+        const res = await pool.query(pgSql, params);
+        return res.rows[0];
+      },
+      run: async (...params) => {
+        const res = await pool.query(pgSql, params);
+        return { changes: res.rowCount };
+      }
+    };
+  },
+  exec: async (sql) => {
+    await pool.query(sql);
+  }
+};
 
 function getDb() {
-  if (!db) {
-    db = new DatabaseSync(DB_PATH);
-    db.exec('PRAGMA journal_mode = WAL');
-    db.exec('PRAGMA foreign_keys = ON');
-    db.exec('PRAGMA synchronous = NORMAL');
-  }
-  return db;
+  return dbMock;
 }
 
-function initDb() {
-  const conn = getDb();
-  const schemaPath = path.join(__dirname, '../../database/schema.sql');
-  const schema = fs.readFileSync(schemaPath, 'utf-8');
-  conn.exec(schema);
-  return conn;
+async function initDb() {
+  return dbMock;
 }
 
-module.exports = { getDb, initDb };
+module.exports = { getDb, initDb, pool };
