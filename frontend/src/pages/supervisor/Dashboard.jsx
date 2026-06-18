@@ -319,7 +319,11 @@ export default function SupervisorDashboard() {
       <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <h2 className="font-semibold text-lg text-slate-900">
-            Inspection Submissions ({timeFilter === 'custom' ? selectedCustomDate : timeFilter.toUpperCase()})
+            Inspection Submissions ({timeFilter === 'custom' 
+              ? customRange.to && customRange.from !== customRange.to
+                ? `${customRange.from} to ${customRange.to}`
+                : customRange.from
+              : timeFilter.toUpperCase()})
           </h2>
           <div className="relative w-full sm:w-72">
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
