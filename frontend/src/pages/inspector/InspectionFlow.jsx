@@ -20,6 +20,7 @@ export default function InspectionFlow() {
   const [remarks, setRemarks] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState('');
+  const [showSuccessPopup, setShowSuccessPopup] = useState(false);
 
   const fetchSession = async () => {
     setLoading(true);
@@ -106,8 +107,7 @@ export default function InspectionFlow() {
     try {
       const res = await api.post(`/sessions/${sessionId}/submit`, { remarks });
       if (res.data.success) {
-        alert('Rake inspection logs locked and submitted successfully.');
-        navigate('/ground-engineer/dashboard');
+        setShowSuccessPopup(true);
       }
     } catch (_) {}
     setSubmitting(false);
@@ -353,6 +353,29 @@ export default function InspectionFlow() {
           </div>
         </div>
       </div>
+      {/* Success Modal */}
+      {showSuccessPopup && (
+        <div className="fixed inset-0 bg-slate-900/30 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white rounded-2xl shadow-2xl p-6 w-80 text-center space-y-4 border border-slate-100 transform transition-all duration-300 scale-100 opacity-100 animate-ios-spring">
+            <div className="w-16 h-16 bg-emerald-50 rounded-full flex items-center justify-center mx-auto border border-emerald-100 shadow-sm">
+              <CheckCircle className="w-8 h-8 text-emerald-600 animate-pulse" />
+            </div>
+            <div className="space-y-1">
+              <h3 className="text-base font-extrabold text-slate-900">Report Submitted</h3>
+              <p className="text-xs text-slate-500 font-medium">Your inspection logs have been locked & synced successfully.</p>
+            </div>
+            <button
+              onClick={() => {
+                setShowSuccessPopup(false);
+                navigate('/ground-engineer/dashboard');
+              }}
+              className="w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-md transition-all duration-200 transform hover:scale-[1.02]"
+            >
+              Done
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
