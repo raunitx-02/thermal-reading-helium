@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '../../api';
 import { useAuth } from '../../contexts/AuthContext';
 import { useModal } from '../../contexts/ModalContext';
-import { Users, UserPlus, RefreshCw, Trash2, Edit, Search, ShieldCheck, ChevronDown, Check, Bell, LogOut, Eye, EyeOff, Sparkles } from 'lucide-react';
+import { Users, UserPlus, RefreshCw, Trash2, Edit, Search, ShieldCheck, ChevronDown, Check, Bell, LogOut, Eye, EyeOff } from 'lucide-react';
 
 export default function BranchAdminDashboard() {
   const { user, logout } = useAuth();
@@ -209,28 +209,6 @@ export default function BranchAdminDashboard() {
     setShowModal(true);
   };
 
-  const handleFillDetails = () => {
-    const firstNames = ['Amit', 'Rajesh', 'Suresh', 'Vikram', 'Pooja', 'Neha', 'Rohan', 'Karan', 'Simran', 'Anjali'];
-    const lastNames = ['Sharma', 'Verma', 'Kumar', 'Singh', 'Gupta', 'Patel', 'Joshi', 'Mehta', 'Reddy', 'Rao'];
-    const randomFirst = firstNames[Math.floor(Math.random() * firstNames.length)];
-    const randomLast = lastNames[Math.floor(Math.random() * lastNames.length)];
-    const randomId = Math.floor(100 + Math.random() * 900);
-    const domain = 'thermalportal.in';
-    const emailPrefix = role === 'supervisor' ? 'test.supervisor' : 'test.engineer';
-    
-    setFirstName(randomFirst);
-    setLastName(randomLast);
-    setEmail(`${emailPrefix}.${randomFirst.toLowerCase()}${randomLast.toLowerCase()}${randomId}@${domain}`);
-    
-    const phonePrefixes = ['7', '8', '9'];
-    let randomPhone = phonePrefixes[Math.floor(Math.random() * phonePrefixes.length)];
-    for (let i = 0; i < 9; i++) {
-      randomPhone += Math.floor(Math.random() * 10);
-    }
-    setPhone(randomPhone);
-    setPassword(`Test@${randomId}#Secure`);
-  };
-
   const handleDeactivate = async (id) => {
     const confirmed = await showConfirm(
       'Confirm Action',
@@ -271,7 +249,7 @@ export default function BranchAdminDashboard() {
         </div>
         <div className="flex items-center gap-3 relative">
           <button onClick={startAdd} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm rounded-lg px-4 py-2.5 transition shadow-sm">
-            <UserPlus className="w-4 h-4" /> Add Team Member
+            <UserPlus className="w-4 h-4" /> Add Team
           </button>
           <button onClick={fetchStaff} className="p-2.5 bg-white border border-slate-200 text-slate-655 hover:text-slate-900 rounded-lg transition shadow-sm" title="Refresh List">
             <RefreshCw className="w-4 h-4" />
@@ -439,18 +417,8 @@ export default function BranchAdminDashboard() {
       {showModal && (
         <div className="fixed inset-0 bg-slate-900/40 flex items-center justify-center p-4 z-50 overflow-y-auto">
           <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-md shadow-2xl p-6 relative">
-            <h2 className="text-xl font-bold text-slate-900 border-b border-slate-100 pb-3 flex justify-between items-center">
-              <span>{editingSupervisor ? 'Edit Team Member Details' : 'Add New Team Member'}</span>
-              {!editingSupervisor && (
-                <button
-                  type="button"
-                  onClick={handleFillDetails}
-                  className="flex items-center gap-1 text-[10px] bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200 px-2 py-1 rounded-lg font-semibold transition shadow-sm"
-                >
-                  <Sparkles className="w-3 h-3 text-blue-500" />
-                  <span>Fill Details</span>
-                </button>
-              )}
+            <h2 className="text-xl font-bold text-slate-900 border-b border-slate-100 pb-3">
+              {editingSupervisor ? 'Edit Team Details' : 'Fill the team details'}
             </h2>
             <form onSubmit={handleSubmit} className="space-y-4 mt-4">
               <div className="grid grid-cols-2 gap-4">
