@@ -71,7 +71,7 @@ export default function Sidebar() {
   ];
 
   const branchAdminLinks = [
-    { to: '/branch-admin/dashboard', label: 'Supervisors', icon: Users },
+    { to: '/branch-admin/dashboard', label: 'Team', icon: Users },
     { to: '/branch-admin/trains', label: 'Configure Rakes', icon: Train }
   ];
 
