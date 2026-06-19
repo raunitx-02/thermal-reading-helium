@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ModalProvider } from './contexts/ModalContext';
 import Sidebar from './components/Sidebar';
+import PWAInstallPrompt from './components/PWAInstallPrompt';
 
 // Pages
 import Login from './pages/auth/Login';
@@ -57,6 +58,7 @@ export default function App() {
     <AuthProvider>
       <ModalProvider>
         <BrowserRouter>
+          <PWAInstallPrompt />
           <Routes>
             {/* Public Routes */}
             <Route path="/login" element={<Login />} />

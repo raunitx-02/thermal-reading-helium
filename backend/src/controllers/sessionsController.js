@@ -251,6 +251,19 @@ exports.submitSession = async (req, res, next) => {
             
             await emailService.sendReportNotification(supervisor, engineer, train, session, readings);
             console.log(`[REPORT EMAIL] Synced and sent successfully to supervisor: ${supervisor.email}`);
+
+            // Add native in-app notification to the supervisor
+            const criticalCount = readings.filter(r => {
+              const rise = r.temperature !== null && r.ambient_temperature !== null ? (parseFloat(r.temperature) - parseFloat(r.ambient_temperature)) : 0;
+              return r.temperature >= r.critical_threshold || rise > 25;
+            }).length;
+            
+            const msg = `Rake ${train.train_number} has been inspected by ${engineer.name}. Status: ${criticalCount > 0 ? `${criticalCount} Breaches Found` : 'All Clear'}`;
+            await db.prepare(`
+              INSERT INTO notifications (id, user_id, type, title, message, link, is_read, created_at)
+              VALUES (?, ?, 'report', 'New Inspection Submitted', ?, '/supervisor/dashboard', 0, ?)
+            `).run(uuidv4(), supervisor.id, msg, now);
+            console.log(`[NATIVE NOTIF] Dispatched to supervisor ${supervisor.id}`);
           }
         }
       } catch (mailErr) {
