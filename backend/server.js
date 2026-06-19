@@ -7,7 +7,7 @@ const rateLimit = require('express-rate-limit');
 const path = require('path');
 const fs = require('fs');
 
-const { initDb } = require('./src/config/database');
+const { initDb, getDb } = require('./src/config/database');
 const errorHandler = require('./src/middleware/error');
 
 // Initialize database & tables

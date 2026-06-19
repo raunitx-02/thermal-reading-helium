@@ -261,7 +261,7 @@ exports.submitSession = async (req, res, next) => {
             const msg = `Rake ${train.train_number} has been inspected by ${engineer.name}. Status: ${criticalCount > 0 ? `${criticalCount} Breaches Found` : 'All Clear'}`;
             await db.prepare(`
               INSERT INTO notifications (id, user_id, type, title, message, link, is_read, created_at)
-              VALUES (?, ?, 'report', 'New Inspection Submitted', ?, '/supervisor/dashboard', 0, ?)
+              VALUES (?, ?, 'info', 'New Inspection Submitted', ?, '/supervisor/dashboard', 0, ?)
             `).run(uuidv4(), supervisor.id, msg, now);
             console.log(`[NATIVE NOTIF] Dispatched to supervisor ${supervisor.id}`);
           }

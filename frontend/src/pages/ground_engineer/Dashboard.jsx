@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '../../api';
 import { useAuth } from '../../contexts/AuthContext';
 import { useModal } from '../../contexts/ModalContext';
-import { Train, Play, RefreshCw, ClipboardList, AlertCircle, Bell, LogOut, X, CheckCircle, AlertTriangle } from 'lucide-react';
+import { Train, Play, RefreshCw, ClipboardList, AlertCircle, Bell, LogOut, X, CheckCircle, AlertTriangle, CheckCircle2, Clock, Info } from 'lucide-react';
 
 export default function EngineerDashboard() {
   const { user, logout } = useAuth();
@@ -268,26 +268,65 @@ export default function EngineerDashboard() {
                 <span className="absolute top-1 right-1 w-1.5 h-1.5 bg-red-600 rounded-full" />
               )}
             </button>
-
             {showNotif && (
-              <div className="absolute right-0 mt-2 w-80 bg-white border border-slate-200 rounded-xl shadow-xl p-4 max-h-80 overflow-y-auto z-50">
-                <h3 className="font-semibold text-xs text-slate-900 border-b border-slate-100 pb-2 mb-2 flex justify-between items-center">
-                  <span>Notifications</span>
-                  <button onClick={() => setShowNotif(false)} className="text-slate-400 hover:text-slate-950">✕</button>
+              <div className="absolute right-0 mt-2 w-80 bg-white/95 backdrop-blur-md border border-slate-200/80 rounded-2xl shadow-2xl p-4 max-h-80 overflow-y-auto z-50 animate-ios-spring">
+                <h3 className="font-bold text-xs text-slate-900 border-b border-slate-100 pb-2 mb-3 flex justify-between items-center">
+                  <span className="flex items-center gap-1.5">
+                    <Bell className="w-3.5 h-3.5 text-blue-600" /> Notifications
+                  </span>
+                  <button onClick={() => setShowNotif(false)} className="text-slate-400 hover:text-slate-955 p-1 rounded-full transition">✕</button>
                 </h3>
                 {notifications.length === 0 ? (
-                  <p className="text-[10px] text-slate-400 text-center py-4">No recent notifications</p>
+                  <div className="text-center py-6">
+                    <p className="text-[11px] text-slate-400 font-medium">No recent notifications</p>
+                  </div>
                 ) : (
                   <div className="space-y-2.5">
-                    {notifications.map(n => (
-                      <div key={n.id} className={`p-2 rounded-lg text-[10px] border ${n.is_read ? 'opacity-65 bg-slate-50/50 border-slate-100' : 'bg-blue-50/30 border-blue-100 text-slate-900'}`}>
-                        <p className="font-semibold text-slate-900">{n.title}</p>
-                        <p className="text-slate-650 mt-0.5">{n.message}</p>
-                        <span className="text-[8px] text-slate-405 mt-1 block">
-                          {new Date(n.created_at * 1000).toLocaleTimeString()}
-                        </span>
-                      </div>
-                    ))}
+                    {notifications.map(n => {
+                      const isAlert = n.type === 'alert' || n.title?.toLowerCase().includes('critical') || n.title?.toLowerCase().includes('breach');
+                      const isSuccess = n.message?.toLowerCase().includes('success') || n.message?.toLowerCase().includes('all clear');
+                      
+                      let bgClass = 'bg-blue-50/30 border-blue-100/50';
+                      let iconColor = 'text-blue-500';
+                      let badgeColor = 'bg-blue-50 border border-blue-100';
+                      let Icon = Info;
+                      
+                      if (isAlert) {
+                        bgClass = 'bg-red-50/30 border-red-100/50';
+                        iconColor = 'text-red-500';
+                        badgeColor = 'bg-red-50 border border-red-100';
+                        Icon = AlertTriangle;
+                      } else if (isSuccess) {
+                        bgClass = 'bg-emerald-50/30 border-emerald-100/50';
+                        iconColor = 'text-emerald-500';
+                        badgeColor = 'bg-emerald-50 border border-emerald-100';
+                        Icon = CheckCircle2;
+                      }
+                      
+                      return (
+                        <div 
+                          key={n.id} 
+                          className={`p-2.5 rounded-xl border text-[10px] transition-all hover:bg-slate-50/80 flex gap-2.5 ${bgClass} ${n.is_read ? 'opacity-65' : 'font-medium shadow-sm'}`}
+                        >
+                          <div className={`p-1.5 rounded-lg ${badgeColor} shrink-0 flex items-center justify-center h-7 w-7`}>
+                            <Icon className={`w-3.5 h-3.5 ${iconColor}`} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex justify-between items-start gap-1">
+                              <p className="font-bold text-slate-900 truncate">{n.title}</p>
+                              {!n.is_read && (
+                                <span className="w-1.5 h-1.5 bg-blue-600 rounded-full shrink-0 mt-1 animate-pulse" />
+                              )}
+                            </div>
+                            <p className="text-slate-650 mt-0.5 leading-normal text-[9px] break-words">{n.message}</p>
+                            <div className="flex items-center gap-1 mt-1.5 text-[8px] text-slate-405 font-semibold">
+                              <Clock className="w-2.5 h-2.5" />
+                              <span>{new Date(n.created_at * 1000).toLocaleTimeString()}</span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>
