@@ -227,8 +227,8 @@ export default function Sidebar() {
               <p className="text-xs font-bold text-slate-900 truncate" title={user?.name}>
                 {user?.name}
               </p>
-              <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider capitalize">
-                {user?.role}
+              <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">
+                {user?.role === 'branch_admin' ? 'Admin' : user?.role === 'super_admin' ? 'Super Admin' : user?.role === 'ground_engineer' ? 'Ground Engineer' : user?.role}
               </p>
             </div>
           </div>

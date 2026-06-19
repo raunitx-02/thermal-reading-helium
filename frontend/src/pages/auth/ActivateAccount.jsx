@@ -99,7 +99,7 @@ export default function ActivateAccount() {
               <p className="text-sm font-bold text-slate-800">{userData?.name}</p>
               <p className="text-[11px] font-medium text-slate-500">{userData?.email}</p>
               <p className="text-[11px] font-bold text-blue-600 uppercase tracking-wider mt-1.5 inline-block bg-blue-50 px-2 py-0.5 rounded border border-blue-100">
-                Role: {userData?.role === 'ground_engineer' ? 'Ground Engineer' : userData?.role === 'supervisor' ? 'Supervisor' : userData?.role === 'branch_admin' ? 'Branch Admin' : 'Staff'}
+                Role: {userData?.role === 'ground_engineer' ? 'Ground Engineer' : userData?.role === 'supervisor' ? 'Supervisor' : userData?.role === 'branch_admin' ? 'Admin' : 'Staff'}
               </p>
             </div>
 

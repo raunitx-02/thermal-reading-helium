@@ -1085,7 +1085,7 @@ export default function SuperAdminDashboard() {
                         {/* Role Badge */}
                         <div className="shrink-0 pl-2">
                           <span className="px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-blue-100/65 text-blue-700">
-                            Branch Admin
+                            Admin
                           </span>
                         </div>
                       </div>
