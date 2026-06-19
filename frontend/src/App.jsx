@@ -7,6 +7,7 @@ import Sidebar from './components/Sidebar';
 // Pages
 import Login from './pages/auth/Login';
 import ForgotPassword from './pages/auth/ForgotPassword';
+import ActivateAccount from './pages/auth/ActivateAccount';
 import InspectionFlow from './pages/inspector/InspectionFlow';
 
 // New Roles Views
@@ -60,6 +61,7 @@ export default function App() {
             {/* Public Routes */}
             <Route path="/login" element={<Login />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/activate-account/:token" element={<ActivateAccount />} />
 
             {/* Super Admin Protected Routes */}
             <Route element={<ProtectedRoute allowedRoles={['super_admin']} />}>

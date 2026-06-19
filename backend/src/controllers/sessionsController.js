@@ -233,6 +233,31 @@ exports.submitSession = async (req, res, next) => {
       `).run(uuidv4(), session.inspector_id, dateStr, isOnTime, violationsCount, isOnTime ? 100.0 : 0.0, now);
     }
     
+    // Send email report to supervisor asynchronously
+    (async () => {
+      try {
+        const engineer = await db.prepare('SELECT * FROM users WHERE id = ?').get(session.inspector_id);
+        if (engineer && engineer.parent_id) {
+          const supervisor = await db.prepare('SELECT * FROM users WHERE id = ?').get(engineer.parent_id);
+          if (supervisor && supervisor.role === 'supervisor') {
+            const train = await db.prepare('SELECT * FROM trains WHERE id = ?').get(session.train_id);
+            const readings = await db.prepare(`
+              SELECT tr.*, z.zone_name, z.zone_type, z.warning_threshold, z.critical_threshold, c.coach_number, c.coach_type
+              FROM thermal_readings tr
+              JOIN zones z ON tr.zone_id = z.id
+              JOIN coaches c ON z.coach_id = c.id
+              WHERE tr.session_id = ?
+            `).all(id);
+            
+            await emailService.sendReportNotification(supervisor, engineer, train, session, readings);
+            console.log(`[REPORT EMAIL] Synced and sent successfully to supervisor: ${supervisor.email}`);
+          }
+        }
+      } catch (mailErr) {
+        console.error('Failed to send inspection report email to supervisor:', mailErr.message);
+      }
+    })();
+    
     res.json({ success: true, message: 'Inspection session submitted and locked' });
   } catch (err) { next(err); }
 };

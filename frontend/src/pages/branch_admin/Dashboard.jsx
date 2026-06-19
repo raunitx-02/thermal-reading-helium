@@ -138,7 +138,7 @@ export default function BranchAdminDashboard() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!firstName || !lastName || !email || (!editingSupervisor && !password)) {
+    if (!firstName || !lastName || !email) {
       showAlert('Required Fields', 'Please fill out all required fields', 'warning');
       return;
     }
@@ -164,7 +164,6 @@ export default function BranchAdminDashboard() {
         const res = await api.post('/users', {
           name,
           email,
-          password,
           role,
           division: user.city || user.division,
           phone,
@@ -172,7 +171,7 @@ export default function BranchAdminDashboard() {
           parent_id: user.id
         });
         if (res.data.success) {
-          showAlert('Success', 'Team member created successfully', 'success');
+          showAlert('Success', 'Team member created successfully. Activation invite sent to email.', 'success');
           setShowModal(false);
           fetchStaff();
         }
@@ -537,27 +536,28 @@ export default function BranchAdminDashboard() {
                 )}
               </div>
 
-              <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Password</label>
-                <div className="relative">
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    required={!editingSupervisor}
-                    placeholder={editingSupervisor ? 'Enter new password (optional)' : 'Enter secure password'}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="w-full border border-slate-200 rounded-lg pl-2.5 pr-10 py-2.5 text-xs focus:outline-none focus:border-blue-500"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-650 transition flex items-center"
-                    title={showPassword ? 'Hide Password' : 'Show Password'}
-                  >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
+              {editingSupervisor && (
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Password</label>
+                  <div className="relative">
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder="Enter new password (optional)"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="w-full border border-slate-200 rounded-lg pl-2.5 pr-10 py-2.5 text-xs focus:outline-none focus:border-blue-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-650 transition flex items-center"
+                      title={showPassword ? 'Hide Password' : 'Show Password'}
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
                 </div>
-              </div>
+              )}
 
               <div className="flex gap-3 justify-end pt-4 border-t border-slate-100">
                 <button

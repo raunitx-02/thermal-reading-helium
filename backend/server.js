@@ -11,8 +11,21 @@ const { initDb } = require('./src/config/database');
 const errorHandler = require('./src/middleware/error');
 
 // Initialize database & tables
-initDb().then(() => {
+initDb().then(async () => {
   console.log('✔ Database initialized and synced.');
+  try {
+    const db = getDb();
+    await db.exec(`
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS is_activated INTEGER NOT NULL DEFAULT 0;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS activation_token TEXT;
+    `);
+    await db.exec(`
+      UPDATE users SET is_activated = 1 WHERE is_activated = 0 AND password_hash IS NOT NULL;
+    `);
+    console.log('✔ Database activation migration applied successfully.');
+  } catch (migErr) {
+    console.error('⚠️ Database migration failed:', migErr.message);
+  }
 }).catch (err => {
   console.error('✘ Database initialization failed:', err.message);
 });

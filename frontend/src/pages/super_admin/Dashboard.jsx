@@ -226,7 +226,7 @@ export default function SuperAdminDashboard() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!branchName || !selectedZone || !name || !email || (!editingAdmin && !password) || !selectedState || !selectedCity) {
+    if (!branchName || !selectedZone || !name || !email || !selectedState || !selectedCity) {
       showAlert('Required Fields', 'Please fill out all required fields', 'warning');
       return;
     }
@@ -254,7 +254,6 @@ export default function SuperAdminDashboard() {
         const res = await api.post('/users', {
           name,
           email,
-          password,
           role: 'branch_admin',
           division: branchName,
           zone: selectedZone,
@@ -263,7 +262,7 @@ export default function SuperAdminDashboard() {
           city: selectedCity
         });
         if (res.data.success) {
-          showAlert('Success', 'Branch Admin appointed successfully', 'success');
+          showAlert('Success', 'Branch Admin appointed successfully. Activation invite sent to email.', 'success');
           setShowModal(false);
           fetchBranchAdmins();
         }
@@ -734,17 +733,18 @@ export default function SuperAdminDashboard() {
                 </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Password</label>
-                <input
-                  type="password"
-                  required={!editingAdmin}
-                  placeholder={editingAdmin ? 'Leave blank to keep same' : 'Minimum 6 characters'}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full border border-slate-200 rounded-lg p-2.5 text-xs focus:outline-none focus:border-blue-500"
-                />
-              </div>
+              {editingAdmin && (
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Password</label>
+                  <input
+                    type="password"
+                    placeholder="Leave blank to keep same"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full border border-slate-200 rounded-lg p-2.5 text-xs focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+              )}
 
               {/* State & City selectors (Cascading custom dropdowns) */}
               <div className="grid grid-cols-2 gap-4 border-t border-slate-100 pt-4">

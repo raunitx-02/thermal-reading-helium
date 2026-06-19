@@ -19,6 +19,10 @@ exports.login = async (req, res, next) => {
     const user = await db.prepare('SELECT * FROM users WHERE email = ? AND is_active = 1').get(email.toLowerCase().trim());
     if (!user) return res.status(401).json({ success: false, message: 'Invalid credentials' });
 
+    if (user.is_activated === 0) {
+      return res.status(401).json({ success: false, message: 'Account is not activated yet' });
+    }
+
     const valid = await bcrypt.compare(password, user.password_hash);
     if (!valid) return res.status(401).json({ success: false, message: 'Invalid credentials' });
 
@@ -106,4 +110,31 @@ exports.me = async (req, res) => {
   const db = getDb();
   const user = await db.prepare('SELECT id, name, email, role, division, state, city, phone, employee_id, parent_id, last_login, created_at FROM users WHERE id = ?').get(req.user.id);
   res.json({ success: true, data: user });
+};
+
+exports.verifyActivation = async (req, res, next) => {
+  try {
+    const { token } = req.query;
+    if (!token) return res.status(400).json({ success: false, message: 'Token required' });
+    const db = getDb();
+    const user = await db.prepare('SELECT id, name, email, role FROM users WHERE activation_token = ? AND is_activated = 0').get(token);
+    if (!user) return res.status(400).json({ success: false, message: 'Invalid or expired activation link' });
+    res.json({ success: true, data: user });
+  } catch (err) { next(err); }
+};
+
+exports.activateAccount = async (req, res, next) => {
+  try {
+    const { token, password } = req.body;
+    if (!token || !password) return res.status(400).json({ success: false, message: 'Token and password required' });
+    const db = getDb();
+    const user = await db.prepare('SELECT id FROM users WHERE activation_token = ? AND is_activated = 0').get(token);
+    if (!user) return res.status(400).json({ success: false, message: 'Invalid or expired activation link' });
+
+    const hash = await bcrypt.hash(password, 12);
+    await db.prepare('UPDATE users SET password_hash = ?, is_activated = 1, activation_token = NULL, updated_at = ? WHERE id = ?')
+      .run(hash, Math.floor(Date.now() / 1000), user.id);
+
+    res.json({ success: true, message: 'Account activated successfully. You can now login.' });
+  } catch (err) { next(err); }
 };

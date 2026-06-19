@@ -1,6 +1,7 @@
 const bcrypt = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
 const { getDb } = require('../config/database');
+const emailService = require('../services/emailService');
 
 exports.getAll = async (req, res, next) => {
   try {
@@ -44,17 +45,27 @@ exports.getById = async (req, res, next) => {
 
 exports.create = async (req, res, next) => {
   try {
-    const { name, email, password, role, division, phone, employee_id, zone, state, city, parent_id } = req.body;
-    if (!name || !email || !password || !role) return res.status(400).json({ success: false, message: 'name, email, password, role required' });
+    const { name, email, role, division, phone, employee_id, zone, state, city, parent_id } = req.body;
+    if (!name || !email || !role) return res.status(400).json({ success: false, message: 'name, email, role required' });
     const db = getDb();
     const existing = await db.prepare('SELECT id FROM users WHERE email = ?').get(email.toLowerCase().trim());
     if (existing) return res.status(409).json({ success: false, message: 'Email already registered' });
-    const hash = await bcrypt.hash(password, 12);
+    
     const id = uuidv4();
+    const activationToken = uuidv4();
+    const hash = 'PENDING_ACTIVATION';
     const now = Math.floor(Date.now() / 1000);
-    await db.prepare(`INSERT INTO users (id, name, email, password_hash, role, division, state, city, phone, employee_id, zone, parent_id, is_active, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)`)
-      .run(id, name, email.toLowerCase().trim(), hash, role, division || 'Mumbai', state || null, city || null, phone || null, employee_id || null, zone || null, parent_id || null, now, now);
-    res.status(201).json({ success: true, data: { id, name, email, role, division, state, city, phone, employee_id, zone, parent_id } });
+    
+    await db.prepare(`INSERT INTO users (id, name, email, password_hash, role, division, state, city, phone, employee_id, zone, parent_id, is_active, is_activated, activation_token, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 0, ?, ?, ?)`)
+      .run(id, name, email.toLowerCase().trim(), hash, role, division || 'Mumbai', state || null, city || null, phone || null, employee_id || null, zone || null, parent_id || null, activationToken, now, now);
+      
+    const newUser = { id, name, email, role, division, state, city, phone, employee_id, zone, parent_id };
+    
+    await emailService.sendActivationEmail(newUser, activationToken).catch((mailErr) => {
+      console.error('Failed to send welcoming activation email:', mailErr.message);
+    });
+
+    res.status(201).json({ success: true, data: newUser });
   } catch (err) { next(err); }
 };
 
