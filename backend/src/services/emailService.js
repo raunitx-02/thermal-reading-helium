@@ -23,7 +23,7 @@ function getTransporter() {
   return transporter;
 }
 
-const RESEND_API_KEY = process.env.RESEND_API_KEY || 're_fXY3Sw9T_DAvwCYE1waMRc3WpV3a9cLi5';
+const RESEND_API_KEY = process.env.RESEND_API_KEY;
 
 async function sendResendEmail(to, subject, html) {
   try {
