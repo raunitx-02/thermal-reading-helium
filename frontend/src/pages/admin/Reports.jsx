@@ -38,7 +38,7 @@ export default function Reports() {
   };
 
   const handleDownload = (format) => {
-    let url = `http://localhost:5050/api/reports/download?format=${format}&type=${type}&startDate=${startDate}&endDate=${endDate}`;
+    let url = `${api.defaults.baseURL}/reports/download?format=${format}&type=${type}&startDate=${startDate}&endDate=${endDate}`;
     if (trainId) url += `&train_id=${trainId}`;
     
     // Attach auth token if available (the API route needs it)
