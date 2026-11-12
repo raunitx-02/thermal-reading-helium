@@ -235,13 +235,6 @@ export default function BranchAdminDashboard() {
       return;
     }
 
-    if (role === 'branch_admin') {
-      if (!branchName || !selectedZone || !selectedState || !selectedCity) {
-        showAlert('Required Fields', 'Please select Depo/Branch Name, Zone, State, and City for the Co-admin.', 'warning');
-        return;
-      }
-    }
-
     const name = `${firstName} ${lastName}`.trim();
 
     try {
@@ -253,10 +246,10 @@ export default function BranchAdminDashboard() {
           phone,
           role,
           employee_id: null,
-          division: role === 'branch_admin' ? branchName : (user.city || user.division),
-          zone: role === 'branch_admin' ? selectedZone : user.zone,
-          state: role === 'branch_admin' ? selectedState : user.state,
-          city: role === 'branch_admin' ? selectedCity : user.city
+          division: user.division || user.city || 'Mumbai',
+          zone: user.zone || null,
+          state: user.state || null,
+          city: user.city || null
         });
         if (res.data.success) {
           showAlert('Success', 'Team member updated successfully', 'success');
@@ -268,10 +261,10 @@ export default function BranchAdminDashboard() {
           name,
           email,
           role,
-          division: role === 'branch_admin' ? branchName : (user.city || user.division),
-          zone: role === 'branch_admin' ? selectedZone : user.zone,
-          state: role === 'branch_admin' ? selectedState : user.state,
-          city: role === 'branch_admin' ? selectedCity : user.city,
+          division: user.division || user.city || 'Mumbai',
+          zone: user.zone || null,
+          state: user.state || null,
+          city: user.city || null,
           phone,
           employee_id: null,
           parent_id: user.id
@@ -807,229 +800,32 @@ export default function BranchAdminDashboard() {
               </div>
 
               {role === 'branch_admin' && (
-                <>
-                  <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Branch/Depo Name</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="E.g. Mumbai Central Depo"
-                      value={branchName}
-                      onChange={(e) => setBranchName(e.target.value)}
-                      className="w-full border border-slate-200 rounded-lg p-2.5 text-xs focus:outline-none focus:border-blue-500"
-                    />
+                <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Assigned Branch & Location</span>
+                    <span className="text-[10px] font-semibold text-emerald-600 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                      Inherited from your branch
+                    </span>
                   </div>
-
-                  <div className="relative zone-dropdown-container">
-                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Select Zone</label>
-                    <button
-                      type="button"
-                      onClick={() => setZoneDropdownOpen(!zoneDropdownOpen)}
-                      className="w-full flex items-center justify-between border border-slate-200 rounded-lg p-2.5 text-xs bg-white focus:outline-none focus:border-blue-500 text-left h-10"
-                    >
-                      <div className="flex items-center gap-2 text-slate-700 truncate pr-4">
-                        <Search className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                        <span className="truncate">
-                          {selectedZone ? (
-                            (() => {
-                              const found = RAILWAY_ZONES_PARSED.find(z => z.value === selectedZone);
-                              return found ? `${found.acronym} • ${found.name} (${found.division})` : selectedZone;
-                            })()
-                          ) : (
-                            <span className="text-slate-400">Search or Select Zone...</span>
-                          )}
-                        </span>
-                      </div>
-                      <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 shrink-0 ${zoneDropdownOpen ? 'rotate-180' : ''}`} />
-                    </button>
-
-                    {zoneDropdownOpen && (
-                      <div className="absolute left-0 right-0 mt-1.5 bg-white border border-slate-200 rounded-xl shadow-xl p-3 z-50 flex flex-col max-h-64 animate-ios-spring">
-                        <div className="relative mb-2 shrink-0">
-                          <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
-                          <input
-                            type="text"
-                            placeholder="Type zone name or acronym..."
-                            value={zoneSearchText}
-                            onChange={(e) => setZoneSearchText(e.target.value)}
-                            className="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-lg text-xs bg-slate-50/50 focus:outline-none focus:border-blue-500 focus:bg-white h-9"
-                          />
-                        </div>
-
-                        <div className="flex-1 overflow-y-auto space-y-1 custom-scrollbar pr-1">
-                          {filteredZones.length === 0 ? (
-                            <div className="text-center py-4 text-slate-400 text-xs">No zones match your search</div>
-                          ) : (
-                            filteredZones.map((z) => {
-                              const isSelected = selectedZone === z.value;
-                              return (
-                                <button
-                                  key={z.value}
-                                  type="button"
-                                  onClick={() => {
-                                    setSelectedZone(z.value);
-                                    setZoneDropdownOpen(false);
-                                    setZoneSearchText('');
-                                  }}
-                                  className={`w-full flex items-center justify-between text-left p-2.5 rounded-lg text-xs transition-colors border ${
-                                    isSelected
-                                      ? 'bg-blue-50/65 text-blue-600 border-blue-200 font-semibold shadow-sm'
-                                      : 'hover:bg-slate-50 text-slate-700 border-transparent'
-                                  }`}
-                                >
-                                  <div className="flex items-center gap-2.5 w-full">
-                                    {isSelected && <Check className="w-3.5 h-3.5 text-blue-600 shrink-0" />}
-                                    <div className="truncate">
-                                      <div className="flex items-center gap-1.5 truncate">
-                                        <span className="font-extrabold text-blue-600 uppercase tracking-wide shrink-0">{z.acronym}</span>
-                                        <span className="text-slate-400 shrink-0">•</span>
-                                        <span className="font-semibold text-slate-800 truncate">{z.name}</span>
-                                      </div>
-                                      <div className="text-[10px] text-slate-400 italic mt-0.5 truncate">
-                                        ({z.division})
-                                      </div>
-                                    </div>
-                                  </div>
-                                </button>
-                              );
-                            })
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="relative state-dropdown-container">
-                      <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Select State</label>
-                      <button
-                        type="button"
-                        onClick={() => setStateDropdownOpen(!stateDropdownOpen)}
-                        className="w-full flex items-center justify-between border border-slate-200 rounded-lg p-2.5 text-xs bg-white focus:outline-none focus:border-blue-500 text-left h-10"
-                      >
-                        <div className="flex items-center gap-2 text-slate-700 truncate pr-4">
-                          <Search className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                          <span className="truncate font-semibold">
-                            {selectedState || <span className="text-slate-400 font-normal">State...</span>}
-                          </span>
-                        </div>
-                        <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 shrink-0 ${stateDropdownOpen ? 'rotate-180' : ''}`} />
-                      </button>
-
-                      {stateDropdownOpen && (
-                        <div className="absolute left-0 right-0 mt-1.5 bg-white border border-slate-200 rounded-xl shadow-xl p-3 z-50 flex flex-col max-h-64 animate-ios-spring">
-                          <div className="relative mb-2 shrink-0">
-                            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
-                            <input
-                              type="text"
-                              placeholder="Type state..."
-                              value={stateSearchText}
-                              onChange={(e) => setStateSearchText(e.target.value)}
-                              className="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-lg text-xs bg-slate-50/50 focus:outline-none focus:border-blue-500 focus:bg-white h-9"
-                            />
-                          </div>
-
-                          <div className="flex-1 overflow-y-auto space-y-1 custom-scrollbar pr-1">
-                            {filteredStates.length === 0 ? (
-                              <div className="text-center py-4 text-slate-400 text-xs">No states</div>
-                            ) : (
-                              filteredStates.map((s) => {
-                                const isSelected = selectedState === s;
-                                return (
-                                  <button
-                                    key={s}
-                                    type="button"
-                                    onClick={() => {
-                                      setSelectedState(s);
-                                      setStateDropdownOpen(false);
-                                      setStateSearchText('');
-                                    }}
-                                    className={`w-full flex items-center justify-between text-left p-2.5 rounded-lg text-xs transition-colors border ${
-                                      isSelected
-                                        ? 'bg-blue-50/65 text-blue-600 border-blue-200 font-bold shadow-sm'
-                                        : 'hover:bg-slate-50 text-slate-700 border-transparent font-semibold'
-                                    }`}
-                                  >
-                                    <div className="flex items-center gap-2.5 w-full">
-                                      {isSelected && <Check className="w-3.5 h-3.5 text-blue-600 shrink-0" />}
-                                      <span className="truncate">{s}</span>
-                                    </div>
-                                  </button>
-                                );
-                              })
-                            )}
-                          </div>
-                        </div>
-                      )}
+                  <div className="grid grid-cols-2 gap-2 text-xs pt-1">
+                    <div>
+                      <span className="text-slate-400 block text-[10px]">Branch / Depo</span>
+                      <span className="font-bold text-slate-800">{user?.division || 'N/A'}</span>
                     </div>
-
-                    <div className="relative district-dropdown-container">
-                      <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Select City</label>
-                      <button
-                        type="button"
-                        disabled={!selectedState}
-                        onClick={() => setDistrictDropdownOpen(!districtDropdownOpen)}
-                        className={`w-full flex items-center justify-between border border-slate-200 rounded-lg p-2.5 text-xs focus:outline-none focus:border-blue-500 text-left h-10 ${
-                          !selectedState ? 'bg-slate-50 cursor-not-allowed text-slate-400' : 'bg-white text-slate-700'
-                        }`}
-                      >
-                        <div className="flex items-center gap-2 truncate pr-4">
-                          <Search className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                          <span className="truncate font-semibold">
-                            {selectedCity || <span className="text-slate-400 font-normal">District...</span>}
-                          </span>
-                        </div>
-                        <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 shrink-0 ${districtDropdownOpen ? 'rotate-180' : ''}`} />
-                      </button>
-
-                      {districtDropdownOpen && selectedState && (
-                        <div className="absolute left-0 right-0 mt-1.5 bg-white border border-slate-200 rounded-xl shadow-xl p-3 z-50 flex flex-col max-h-64 animate-ios-spring">
-                          <div className="relative mb-2 shrink-0">
-                            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
-                            <input
-                              type="text"
-                              placeholder="Type district..."
-                              value={districtSearchText}
-                              onChange={(e) => setDistrictSearchText(e.target.value)}
-                              className="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-lg text-xs bg-slate-50/50 focus:outline-none focus:border-blue-500 focus:bg-white h-9"
-                            />
-                          </div>
-
-                          <div className="flex-1 overflow-y-auto space-y-1 custom-scrollbar pr-1">
-                            {filteredDistricts.length === 0 ? (
-                              <div className="text-center py-4 text-slate-400 text-xs">No districts</div>
-                            ) : (
-                              filteredDistricts.map((d) => {
-                                const isSelected = selectedCity === d;
-                                return (
-                                  <button
-                                    key={d}
-                                    type="button"
-                                    onClick={() => {
-                                      setSelectedCity(d);
-                                      setDistrictDropdownOpen(false);
-                                      setDistrictSearchText('');
-                                    }}
-                                    className={`w-full flex items-center justify-between text-left p-2.5 rounded-lg text-xs transition-colors border ${
-                                      isSelected
-                                        ? 'bg-blue-50/65 text-blue-600 border-blue-200 font-bold shadow-sm'
-                                        : 'hover:bg-slate-50 text-slate-700 border-transparent font-semibold'
-                                    }`}
-                                  >
-                                    <div className="flex items-center gap-2.5 w-full">
-                                      {isSelected && <Check className="w-3.5 h-3.5 text-blue-600 shrink-0" />}
-                                      <span className="truncate">{d}</span>
-                                    </div>
-                                  </button>
-                                );
-                              })
-                            )}
-                          </div>
-                        </div>
-                      )}
+                    <div>
+                      <span className="text-slate-400 block text-[10px]">Zone</span>
+                      <span className="font-semibold text-slate-700 truncate block" title={user?.zone}>{user?.zone || 'N/A'}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 block text-[10px]">State</span>
+                      <span className="font-semibold text-slate-700">{user?.state || 'N/A'}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 block text-[10px]">City</span>
+                      <span className="font-semibold text-slate-700">{user?.city || 'N/A'}</span>
                     </div>
                   </div>
-                </>
+                </div>
               )}
 
               {editingSupervisor && (

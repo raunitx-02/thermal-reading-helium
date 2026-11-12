@@ -45,8 +45,19 @@ exports.getById = async (req, res, next) => {
 
 exports.create = async (req, res, next) => {
   try {
-    const { name, email, role, division, phone, employee_id, zone, state, city, parent_id } = req.body;
+    let { name, email, role, division, phone, employee_id, zone, state, city, parent_id } = req.body;
     if (!name || !email || !role) return res.status(400).json({ success: false, message: 'name, email, role required' });
+
+    // If a branch_admin creates users (co-admin, supervisor, ground engineer),
+    // enforce that they can only be added strictly under the branch admin's own branch/division
+    if (req.user && req.user.role === 'branch_admin') {
+      division = req.user.division;
+      zone = req.user.zone || zone;
+      state = req.user.state || state;
+      city = req.user.city || city;
+      parent_id = req.user.id;
+    }
+
     const db = getDb();
     const existing = await db.prepare('SELECT id FROM users WHERE email = ?').get(email.toLowerCase().trim());
     if (existing) return res.status(409).json({ success: false, message: 'Email already registered' });
