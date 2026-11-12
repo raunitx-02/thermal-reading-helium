@@ -142,7 +142,7 @@ export default function BranchTrainsManager() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 pb-4">
         <div>
           <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Rake Configurations</h1>
-          <p className="text-slate-500 text-sm mt-1">Configure active rakes, division ownership, and safety criteria for government inspections</p>
+          <p className="text-slate-500 text-sm mt-1">Configure rakes, ownership, and safety analysis</p>
         </div>
         <div className="flex items-center gap-3">
           <button onClick={startAdd} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm rounded-lg px-4 py-2.5 transition shadow-sm">

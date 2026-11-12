@@ -5,8 +5,8 @@ const { getDb } = require('../config/database');
 const emailService = require('../services/emailService');
 
 const generateTokens = (userId) => {
-  const accessToken = jwt.sign({ userId }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN || '15m' });
-  const refreshToken = jwt.sign({ userId }, process.env.JWT_REFRESH_SECRET, { expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d' });
+  const accessToken = jwt.sign({ userId }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN || '8h' });
+  const refreshToken = jwt.sign({ userId }, process.env.JWT_REFRESH_SECRET, { expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '30d' });
   return { accessToken, refreshToken };
 };
 
@@ -49,16 +49,18 @@ exports.refresh = async (req, res, next) => {
 
     const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
     const db = getDb();
-    const stored = await db.prepare('SELECT * FROM refresh_tokens WHERE token = ? AND user_id = ? AND expires_at > ?').get(refreshToken, decoded.userId, Math.floor(Date.now() / 1000));
+    const now = Math.floor(Date.now() / 1000);
+    const stored = await db.prepare('SELECT * FROM refresh_tokens WHERE token = ? AND user_id = ? AND expires_at > ?').get(refreshToken, decoded.userId, now);
     if (!stored) return res.status(401).json({ success: false, message: 'Invalid or expired refresh token' });
 
     const user = await db.prepare('SELECT id, role FROM users WHERE id = ? AND is_active = 1').get(decoded.userId);
     if (!user) return res.status(401).json({ success: false, message: 'User not found' });
 
     const { accessToken, refreshToken: newRefreshToken } = generateTokens(user.id);
-    const expiresAt = Math.floor(Date.now() / 1000) + 7 * 24 * 3600;
-    await db.prepare('DELETE FROM refresh_tokens WHERE id = ?').run(stored.id);
-    await db.prepare('INSERT INTO refresh_tokens (id, user_id, token, expires_at, created_at) VALUES (?, ?, ?, ?, ?)').run(uuidv4(), user.id, newRefreshToken, expiresAt, Math.floor(Date.now() / 1000));
+    const expiresAt = now + 30 * 24 * 3600; // 30 days
+    // Grace period of 60 seconds before expiring the old token to absorb any in-flight requests
+    await db.prepare('UPDATE refresh_tokens SET expires_at = ? WHERE id = ?').run(now + 60, stored.id);
+    await db.prepare('INSERT INTO refresh_tokens (id, user_id, token, expires_at, created_at) VALUES (?, ?, ?, ?, ?)').run(uuidv4(), user.id, newRefreshToken, expiresAt, now);
 
     res.json({ success: true, data: { accessToken, refreshToken: newRefreshToken } });
   } catch (err) { next(err); }

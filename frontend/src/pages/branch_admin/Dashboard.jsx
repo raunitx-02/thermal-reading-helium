@@ -3,7 +3,28 @@ import { useNavigate } from 'react-router-dom';
 import api from '../../api';
 import { useAuth } from '../../contexts/AuthContext';
 import { useModal } from '../../contexts/ModalContext';
-import { Users, UserPlus, RefreshCw, Trash2, Edit, Search, ShieldCheck, ChevronDown, Check, Bell, LogOut, Eye, EyeOff, AlertTriangle, CheckCircle2, Clock, Info } from 'lucide-react';
+import { Users, UserPlus, RefreshCw, Trash2, Edit, Search, ShieldCheck, ChevronDown, Check, Bell, LogOut, Eye, EyeOff, AlertTriangle, CheckCircle2, Clock, Info, Power } from 'lucide-react';
+
+const RAILWAY_ZONES_PARSED = [
+  { acronym: 'CR', name: 'Central Railway', division: 'Mumbai', value: 'Central Railway (CR) - Mumbai' },
+  { acronym: 'ECR', name: 'East Central Railway', division: 'Hajipur', value: 'East Central Railway (ECR) - Hajipur' },
+  { acronym: 'ECoR', name: 'East Coast Railway', division: 'Bhubaneswar', value: 'East Coast Railway (ECoR) - Bhubaneswar' },
+  { acronym: 'ER', name: 'Eastern Railway', division: 'Kolkata', value: 'Eastern Railway (ER) - Kolkata' },
+  { acronym: 'NCR', name: 'North Central Railway', division: 'Prayagraj', value: 'North Central Railway (NCR) - Prayagraj' },
+  { acronym: 'NER', name: 'North Eastern Railway', division: 'Gorakhpur', value: 'North Eastern Railway (NER) - Gorakhpur' },
+  { acronym: 'NFR', name: 'Northeast Frontier Railway', division: 'Maligaon, Guwahati', value: 'Northeast Frontier Railway (NFR) - Maligaon, Guwahati' },
+  { acronym: 'NR', name: 'Northern Railway', division: 'New Delhi', value: 'Northern Railway (NR) - New Delhi' },
+  { acronym: 'NWR', name: 'North Western Railway', division: 'Jaipur', value: 'North Western Railway (NWR) - Jaipur' },
+  { acronym: 'SCR', name: 'South Central Railway', division: 'Secunderabad', value: 'South Central Railway (SCR) - Secunderabad' },
+  { acronym: 'SECR', name: 'South East Central Railway', division: 'Bilaspur', value: 'South East Central Railway (SECR) - Bilaspur' },
+  { acronym: 'SER', name: 'South Eastern Railway', division: 'Garden Reach, Kolkata', value: 'South Eastern Railway (SER) - Garden Reach, Kolkata' },
+  { acronym: 'SWR', name: 'South Western Railway', division: 'Hubballi', value: 'South Western Railway (SWR) - Hubballi' },
+  { acronym: 'SR', name: 'Southern Railway', division: 'Chennai', value: 'Southern Railway (SR) - Chennai' },
+  { acronym: 'WCR', name: 'West Central Railway', division: 'Jabalpur', value: 'West Central Railway (WCR) - Jabalpur' },
+  { acronym: 'WR', name: 'Western Railway', division: 'Mumbai Central', value: 'Western Railway (WR) - Mumbai Central' },
+  { acronym: 'Metro', name: 'Metro Railway, Kolkata', division: 'Kolkata', value: 'Metro Railway, Kolkata - Kolkata' },
+  { acronym: 'SCoR', name: 'South Coast Railway', division: 'Visakhapatnam', value: 'South Coast Railway (SCoR) - Visakhapatnam' }
+];
 
 export default function BranchAdminDashboard() {
   const { user, logout } = useAuth();
@@ -54,6 +75,32 @@ export default function BranchAdminDashboard() {
   const [role, setRole] = useState('supervisor');
   const [roleDropdownOpen, setRoleDropdownOpen] = useState(false);
 
+  // Co-admin location/zone states (mimicking super admin)
+  const [states, setStates] = useState(() => {
+    try {
+      const email = user?.email || 'guest';
+      const cached = localStorage.getItem(`cache_${email}_states`);
+      return cached ? JSON.parse(cached) : [];
+    } catch (_) {
+      return [];
+    }
+  });
+  const [districts, setDistricts] = useState([]);
+  const [branchName, setBranchName] = useState('');
+  const [selectedZone, setSelectedZone] = useState('');
+  const [selectedState, setSelectedState] = useState('');
+  const [selectedCity, setSelectedCity] = useState('');
+
+  // Searchable dropdown states
+  const [zoneDropdownOpen, setZoneDropdownOpen] = useState(false);
+  const [zoneSearchText, setZoneSearchText] = useState('');
+
+  const [stateDropdownOpen, setStateDropdownOpen] = useState(false);
+  const [stateSearchText, setStateSearchText] = useState('');
+
+  const [districtDropdownOpen, setDistrictDropdownOpen] = useState(false);
+  const [districtSearchText, setDistrictSearchText] = useState('');
+
   useEffect(() => {
     if (!showNotif) return;
     const handleOutsideClick = (e) => {
@@ -75,6 +122,23 @@ export default function BranchAdminDashboard() {
     document.addEventListener('mousedown', handleOutsideClick);
     return () => document.removeEventListener('mousedown', handleOutsideClick);
   }, [roleDropdownOpen]);
+
+  useEffect(() => {
+    if (!zoneDropdownOpen && !stateDropdownOpen && !districtDropdownOpen) return;
+    const handleOutsideClick = (e) => {
+      if (zoneDropdownOpen && !e.target.closest('.zone-dropdown-container')) {
+        setZoneDropdownOpen(false);
+      }
+      if (stateDropdownOpen && !e.target.closest('.state-dropdown-container')) {
+        setStateDropdownOpen(false);
+      }
+      if (districtDropdownOpen && !e.target.closest('.district-dropdown-container')) {
+        setDistrictDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, [zoneDropdownOpen, stateDropdownOpen, districtDropdownOpen]);
 
   const fetchNotifs = async () => {
     try {
@@ -115,6 +179,28 @@ export default function BranchAdminDashboard() {
     navigate('/login');
   };
 
+  const fetchStates = async () => {
+    try {
+      const res = await api.get('/geo/states');
+      if (res.data.success) {
+        setStates(res.data.data);
+        const email = user?.email || 'guest';
+        localStorage.setItem(`cache_${email}_states`, JSON.stringify(res.data.data));
+      }
+    } catch (_) {}
+  };
+
+  const fetchDistricts = async (state) => {
+    if (!state) {
+      setDistricts([]);
+      return;
+    }
+    try {
+      const res = await api.get(`/geo/districts?state=${encodeURIComponent(state)}`);
+      if (res.data.success) setDistricts(res.data.data);
+    } catch (_) {}
+  };
+
   const fetchStaff = async () => {
     const cacheKey = user?.id ? `cache_branch_admin_staff_${user.id}` : 'cache_branch_admin_staff';
     const cachedData = localStorage.getItem(cacheKey);
@@ -134,13 +220,26 @@ export default function BranchAdminDashboard() {
 
   useEffect(() => {
     fetchStaff();
+    fetchStates();
   }, []);
+
+  useEffect(() => {
+    fetchDistricts(selectedState);
+    setSelectedCity('');
+  }, [selectedState]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!firstName || !lastName || !email) {
       showAlert('Required Fields', 'Please fill out all required fields', 'warning');
       return;
+    }
+
+    if (role === 'branch_admin') {
+      if (!branchName || !selectedZone || !selectedState || !selectedCity) {
+        showAlert('Required Fields', 'Please select Depo/Branch Name, Zone, State, and City for the Co-admin.', 'warning');
+        return;
+      }
     }
 
     const name = `${firstName} ${lastName}`.trim();
@@ -153,7 +252,11 @@ export default function BranchAdminDashboard() {
           password: password || undefined,
           phone,
           role,
-          employee_id: null
+          employee_id: null,
+          division: role === 'branch_admin' ? branchName : (user.city || user.division),
+          zone: role === 'branch_admin' ? selectedZone : user.zone,
+          state: role === 'branch_admin' ? selectedState : user.state,
+          city: role === 'branch_admin' ? selectedCity : user.city
         });
         if (res.data.success) {
           showAlert('Success', 'Team member updated successfully', 'success');
@@ -165,7 +268,10 @@ export default function BranchAdminDashboard() {
           name,
           email,
           role,
-          division: user.city || user.division,
+          division: role === 'branch_admin' ? branchName : (user.city || user.division),
+          zone: role === 'branch_admin' ? selectedZone : user.zone,
+          state: role === 'branch_admin' ? selectedState : user.state,
+          city: role === 'branch_admin' ? selectedCity : user.city,
           phone,
           employee_id: null,
           parent_id: user.id
@@ -191,6 +297,10 @@ export default function BranchAdminDashboard() {
     setShowPassword(false);
     setPhone(member.phone || '');
     setRole(member.role || 'supervisor');
+    setBranchName(member.division || '');
+    setSelectedZone(member.zone || '');
+    setSelectedState(member.state || '');
+    setSelectedCity(member.city || '');
     setRoleDropdownOpen(false);
     setShowModal(true);
   };
@@ -204,27 +314,69 @@ export default function BranchAdminDashboard() {
     setShowPassword(false);
     setPhone('');
     setRole('supervisor');
+    setBranchName('');
+    setSelectedZone('');
+    setSelectedState('');
+    setSelectedCity('');
     setRoleDropdownOpen(false);
     setShowModal(true);
   };
 
-  const handleDeactivate = async (id) => {
+  const handleToggleActive = async (member) => {
+    const actionText = member.is_active === 1 ? 'deactivate' : 'activate';
     const confirmed = await showConfirm(
       'Confirm Action',
-      'Are you sure you want to deactivate this team member?',
+      `Are you sure you want to ${actionText} this team member?`,
       'warning',
-      'Yes, Deactivate',
+      'Yes, Proceed',
+      'Cancel'
+    );
+    if (!confirmed) return;
+
+    try {
+      const res = await api.put(`/users/${member.id}/toggle-active`);
+      if (res.data.success) {
+        showAlert('Success', res.data.message, 'success');
+        fetchStaff();
+      }
+    } catch (err) {
+      showAlert('Error', err.response?.data?.message || 'Action failed', 'error');
+    }
+  };
+
+  const handleDeleteUser = async (id) => {
+    const confirmed = await showConfirm(
+      'Confirm Permanent Delete',
+      'Are you sure you want to permanently delete this team member? All their data (inspection logs, assignments, etc.) will be deleted forever. This action cannot be undone!',
+      'warning',
+      'Yes, Delete Forever',
       'Cancel'
     );
     if (!confirmed) return;
     try {
       const res = await api.delete(`/users/${id}`);
       if (res.data.success) {
-        showAlert('Success', 'Team member deactivated', 'success');
+        showAlert('Success', 'Team member deleted completely', 'success');
         fetchStaff();
       }
-    } catch (_) {}
+    } catch (err) {
+      showAlert('Error', err.response?.data?.message || 'Delete failed', 'error');
+    }
   };
+
+  const filteredZones = RAILWAY_ZONES_PARSED.filter(z => 
+    z.acronym.toLowerCase().includes(zoneSearchText.toLowerCase()) ||
+    z.name.toLowerCase().includes(zoneSearchText.toLowerCase()) ||
+    z.division.toLowerCase().includes(zoneSearchText.toLowerCase())
+  );
+
+  const filteredStates = states.filter(s => 
+    s.toLowerCase().includes(stateSearchText.toLowerCase())
+  );
+
+  const filteredDistricts = districts.filter(d => 
+    d.toLowerCase().includes(districtSearchText.toLowerCase())
+  );
 
   const filtered = staff.filter(s => {
     const matchesSearch = s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -235,9 +387,31 @@ export default function BranchAdminDashboard() {
 
   const supervisorCount = staff.filter(s => s.role === 'supervisor').length;
   const engineerCount = staff.filter(s => s.role === 'ground_engineer').length;
+  const coAdminCount = staff.filter(s => s.role === 'branch_admin').length;
 
   return (
     <div className="p-6 md:p-8 space-y-8 max-w-7xl">
+      {/* Dynamic styles for iOS bouncy transitions */}
+      <style>{`
+        @keyframes iosSpring {
+          0% { transform: scale(0.92) translateY(20px); opacity: 0; }
+          100% { transform: scale(1) translateY(0); opacity: 1; }
+        }
+        .animate-ios-spring {
+          animation: iosSpring 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: #cbd5e1;
+          border-radius: 10px;
+        }
+      `}</style>
+
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 pb-4">
         <div>
@@ -347,7 +521,7 @@ export default function BranchAdminDashboard() {
       </div>
 
       {/* Quick Count Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
         <div 
           onClick={() => setActiveRoleFilter(activeRoleFilter === 'supervisor' ? null : 'supervisor')}
           className={`p-5 border rounded-xl shadow-sm flex flex-col justify-between min-h-[120px] transition-all hover:shadow-md cursor-pointer select-none ${
@@ -385,6 +559,26 @@ export default function BranchAdminDashboard() {
           <div className="mt-3 flex items-baseline justify-between">
             <h3 className="text-2xl md:text-3xl font-black text-slate-900 leading-none">{engineerCount}</h3>
             {activeRoleFilter === 'ground_engineer' && <span className="text-[10px] text-orange-600 font-bold uppercase">Filtered view active</span>}
+          </div>
+        </div>
+
+        <div 
+          onClick={() => setActiveRoleFilter(activeRoleFilter === 'branch_admin' ? null : 'branch_admin')}
+          className={`p-5 border rounded-xl shadow-sm flex flex-col justify-between min-h-[120px] transition-all hover:shadow-md cursor-pointer select-none ${
+            activeRoleFilter === 'branch_admin' 
+              ? 'bg-emerald-50/30 border-emerald-500 ring-2 ring-emerald-500/25' 
+              : 'bg-white border-slate-200 hover:border-emerald-300'
+          }`}
+        >
+          <div className="flex items-start justify-between gap-3">
+            <span className="text-[10px] md:text-xs text-slate-500 font-bold uppercase tracking-wider block">Co-admins Appointed</span>
+            <div className="flex items-center justify-center w-10 h-10 rounded-lg border shrink-0 bg-emerald-50 text-emerald-600 border-emerald-100">
+              <Users className="w-5 h-5" />
+            </div>
+          </div>
+          <div className="mt-3 flex items-baseline justify-between">
+            <h3 className="text-2xl md:text-3xl font-black text-slate-900 leading-none">{coAdminCount}</h3>
+            {activeRoleFilter === 'branch_admin' && <span className="text-[10px] text-emerald-600 font-bold uppercase">Filtered view active</span>}
           </div>
         </div>
       </div>
@@ -429,7 +623,7 @@ export default function BranchAdminDashboard() {
                     <td className="p-4 font-mono">{s.email}</td>
                     <td className="p-4 text-slate-500">{s.phone || 'N/A'}</td>
                     <td className="p-4 font-semibold text-slate-655 capitalize">
-                      {s.role === 'ground_engineer' ? 'Ground Engineer' : 'Supervisor'}
+                      {s.role === 'ground_engineer' ? 'Ground Engineer' : s.role === 'branch_admin' ? 'Co-admin' : 'Supervisor'}
                     </td>
                     <td className="p-4 text-center">
                       <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${s.is_active ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-red-50 text-red-650 border border-red-100'}`}>
@@ -437,10 +631,21 @@ export default function BranchAdminDashboard() {
                       </span>
                     </td>
                     <td className="p-4 text-center space-x-2">
-                      <button onClick={() => startEdit(s)} className="p-1.5 hover:bg-slate-100 text-slate-500 hover:text-blue-600 rounded-lg transition">
+                      <button onClick={() => startEdit(s)} className="p-1.5 hover:bg-slate-100 text-slate-500 hover:text-blue-600 rounded-lg transition" title="Edit Member">
                         <Edit className="w-4 h-4" />
                       </button>
-                      <button onClick={() => handleDeactivate(s.id)} className="p-1.5 hover:bg-slate-100 text-slate-500 hover:text-red-600 rounded-lg transition">
+                      <button 
+                        onClick={() => handleToggleActive(s)} 
+                        className={`p-1.5 rounded-lg transition ${
+                          s.is_active === 1 
+                            ? 'text-red-500 hover:bg-red-50 hover:text-red-600' 
+                            : 'text-emerald-500 hover:bg-emerald-50 hover:text-emerald-600'
+                        }`}
+                        title={s.is_active === 1 ? 'Deactivate Member' : 'Activate Member'}
+                      >
+                        <Power className="w-4 h-4" />
+                      </button>
+                      <button onClick={() => handleDeleteUser(s.id)} className="p-1.5 hover:bg-slate-100 text-slate-500 hover:text-red-650 rounded-lg transition" title="Delete Member Forever">
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </td>
@@ -521,10 +726,15 @@ export default function BranchAdminDashboard() {
                         <Users className="w-4 h-4 text-blue-500 shrink-0" />
                         <span>Supervisor</span>
                       </>
-                    ) : (
+                    ) : role === 'ground_engineer' ? (
                       <>
                         <ShieldCheck className="w-4 h-4 text-orange-500 shrink-0" />
                         <span>Ground Engineer</span>
+                      </>
+                    ) : (
+                      <>
+                        <Users className="w-4 h-4 text-emerald-500 shrink-0" />
+                        <span>Co-admin</span>
                       </>
                     )}
                   </div>
@@ -572,9 +782,255 @@ export default function BranchAdminDashboard() {
                       </div>
                       {role === 'ground_engineer' && <Check className="w-3.5 h-3.5 text-orange-600 shrink-0" />}
                     </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setRole('branch_admin');
+                        setRoleDropdownOpen(false);
+                      }}
+                      className={`flex items-center justify-between p-2.5 rounded-lg text-left transition ${
+                        role === 'branch_admin' ? 'bg-emerald-50/75 text-emerald-755' : 'hover:bg-slate-50 text-slate-700'
+                      }`}
+                    >
+                      <div className="flex items-start gap-2.5">
+                        <Users className={`w-4 h-4 mt-0.5 shrink-0 ${role === 'branch_admin' ? 'text-emerald-500' : 'text-slate-400'}`} />
+                        <div>
+                          <p className="font-semibold text-xs leading-none">Co-admin</p>
+                          <p className="text-[10px] text-slate-455 mt-1">Appoints other branch admins & configures rakes</p>
+                        </div>
+                      </div>
+                      {role === 'branch_admin' && <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />}
+                    </button>
                   </div>
                 )}
               </div>
+
+              {role === 'branch_admin' && (
+                <>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Branch/Depo Name</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="E.g. Mumbai Central Depo"
+                      value={branchName}
+                      onChange={(e) => setBranchName(e.target.value)}
+                      className="w-full border border-slate-200 rounded-lg p-2.5 text-xs focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
+
+                  <div className="relative zone-dropdown-container">
+                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Select Zone</label>
+                    <button
+                      type="button"
+                      onClick={() => setZoneDropdownOpen(!zoneDropdownOpen)}
+                      className="w-full flex items-center justify-between border border-slate-200 rounded-lg p-2.5 text-xs bg-white focus:outline-none focus:border-blue-500 text-left h-10"
+                    >
+                      <div className="flex items-center gap-2 text-slate-700 truncate pr-4">
+                        <Search className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                        <span className="truncate">
+                          {selectedZone ? (
+                            (() => {
+                              const found = RAILWAY_ZONES_PARSED.find(z => z.value === selectedZone);
+                              return found ? `${found.acronym} • ${found.name} (${found.division})` : selectedZone;
+                            })()
+                          ) : (
+                            <span className="text-slate-400">Search or Select Zone...</span>
+                          )}
+                        </span>
+                      </div>
+                      <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 shrink-0 ${zoneDropdownOpen ? 'rotate-180' : ''}`} />
+                    </button>
+
+                    {zoneDropdownOpen && (
+                      <div className="absolute left-0 right-0 mt-1.5 bg-white border border-slate-200 rounded-xl shadow-xl p-3 z-50 flex flex-col max-h-64 animate-ios-spring">
+                        <div className="relative mb-2 shrink-0">
+                          <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
+                          <input
+                            type="text"
+                            placeholder="Type zone name or acronym..."
+                            value={zoneSearchText}
+                            onChange={(e) => setZoneSearchText(e.target.value)}
+                            className="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-lg text-xs bg-slate-50/50 focus:outline-none focus:border-blue-500 focus:bg-white h-9"
+                          />
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto space-y-1 custom-scrollbar pr-1">
+                          {filteredZones.length === 0 ? (
+                            <div className="text-center py-4 text-slate-400 text-xs">No zones match your search</div>
+                          ) : (
+                            filteredZones.map((z) => {
+                              const isSelected = selectedZone === z.value;
+                              return (
+                                <button
+                                  key={z.value}
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedZone(z.value);
+                                    setZoneDropdownOpen(false);
+                                    setZoneSearchText('');
+                                  }}
+                                  className={`w-full flex items-center justify-between text-left p-2.5 rounded-lg text-xs transition-colors border ${
+                                    isSelected
+                                      ? 'bg-blue-50/65 text-blue-600 border-blue-200 font-semibold shadow-sm'
+                                      : 'hover:bg-slate-50 text-slate-700 border-transparent'
+                                  }`}
+                                >
+                                  <div className="flex items-center gap-2.5 w-full">
+                                    {isSelected && <Check className="w-3.5 h-3.5 text-blue-600 shrink-0" />}
+                                    <div className="truncate">
+                                      <div className="flex items-center gap-1.5 truncate">
+                                        <span className="font-extrabold text-blue-600 uppercase tracking-wide shrink-0">{z.acronym}</span>
+                                        <span className="text-slate-400 shrink-0">•</span>
+                                        <span className="font-semibold text-slate-800 truncate">{z.name}</span>
+                                      </div>
+                                      <div className="text-[10px] text-slate-400 italic mt-0.5 truncate">
+                                        ({z.division})
+                                      </div>
+                                    </div>
+                                  </div>
+                                </button>
+                              );
+                            })
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="relative state-dropdown-container">
+                      <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Select State</label>
+                      <button
+                        type="button"
+                        onClick={() => setStateDropdownOpen(!stateDropdownOpen)}
+                        className="w-full flex items-center justify-between border border-slate-200 rounded-lg p-2.5 text-xs bg-white focus:outline-none focus:border-blue-500 text-left h-10"
+                      >
+                        <div className="flex items-center gap-2 text-slate-700 truncate pr-4">
+                          <Search className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                          <span className="truncate font-semibold">
+                            {selectedState || <span className="text-slate-400 font-normal">State...</span>}
+                          </span>
+                        </div>
+                        <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 shrink-0 ${stateDropdownOpen ? 'rotate-180' : ''}`} />
+                      </button>
+
+                      {stateDropdownOpen && (
+                        <div className="absolute left-0 right-0 mt-1.5 bg-white border border-slate-200 rounded-xl shadow-xl p-3 z-50 flex flex-col max-h-64 animate-ios-spring">
+                          <div className="relative mb-2 shrink-0">
+                            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
+                            <input
+                              type="text"
+                              placeholder="Type state..."
+                              value={stateSearchText}
+                              onChange={(e) => setStateSearchText(e.target.value)}
+                              className="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-lg text-xs bg-slate-50/50 focus:outline-none focus:border-blue-500 focus:bg-white h-9"
+                            />
+                          </div>
+
+                          <div className="flex-1 overflow-y-auto space-y-1 custom-scrollbar pr-1">
+                            {filteredStates.length === 0 ? (
+                              <div className="text-center py-4 text-slate-400 text-xs">No states</div>
+                            ) : (
+                              filteredStates.map((s) => {
+                                const isSelected = selectedState === s;
+                                return (
+                                  <button
+                                    key={s}
+                                    type="button"
+                                    onClick={() => {
+                                      setSelectedState(s);
+                                      setStateDropdownOpen(false);
+                                      setStateSearchText('');
+                                    }}
+                                    className={`w-full flex items-center justify-between text-left p-2.5 rounded-lg text-xs transition-colors border ${
+                                      isSelected
+                                        ? 'bg-blue-50/65 text-blue-600 border-blue-200 font-bold shadow-sm'
+                                        : 'hover:bg-slate-50 text-slate-700 border-transparent font-semibold'
+                                    }`}
+                                  >
+                                    <div className="flex items-center gap-2.5 w-full">
+                                      {isSelected && <Check className="w-3.5 h-3.5 text-blue-600 shrink-0" />}
+                                      <span className="truncate">{s}</span>
+                                    </div>
+                                  </button>
+                                );
+                              })
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="relative district-dropdown-container">
+                      <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Select City</label>
+                      <button
+                        type="button"
+                        disabled={!selectedState}
+                        onClick={() => setDistrictDropdownOpen(!districtDropdownOpen)}
+                        className={`w-full flex items-center justify-between border border-slate-200 rounded-lg p-2.5 text-xs focus:outline-none focus:border-blue-500 text-left h-10 ${
+                          !selectedState ? 'bg-slate-50 cursor-not-allowed text-slate-400' : 'bg-white text-slate-700'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 truncate pr-4">
+                          <Search className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                          <span className="truncate font-semibold">
+                            {selectedCity || <span className="text-slate-400 font-normal">District...</span>}
+                          </span>
+                        </div>
+                        <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 shrink-0 ${districtDropdownOpen ? 'rotate-180' : ''}`} />
+                      </button>
+
+                      {districtDropdownOpen && selectedState && (
+                        <div className="absolute left-0 right-0 mt-1.5 bg-white border border-slate-200 rounded-xl shadow-xl p-3 z-50 flex flex-col max-h-64 animate-ios-spring">
+                          <div className="relative mb-2 shrink-0">
+                            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
+                            <input
+                              type="text"
+                              placeholder="Type district..."
+                              value={districtSearchText}
+                              onChange={(e) => setDistrictSearchText(e.target.value)}
+                              className="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-lg text-xs bg-slate-50/50 focus:outline-none focus:border-blue-500 focus:bg-white h-9"
+                            />
+                          </div>
+
+                          <div className="flex-1 overflow-y-auto space-y-1 custom-scrollbar pr-1">
+                            {filteredDistricts.length === 0 ? (
+                              <div className="text-center py-4 text-slate-400 text-xs">No districts</div>
+                            ) : (
+                              filteredDistricts.map((d) => {
+                                const isSelected = selectedCity === d;
+                                return (
+                                  <button
+                                    key={d}
+                                    type="button"
+                                    onClick={() => {
+                                      setSelectedCity(d);
+                                      setDistrictDropdownOpen(false);
+                                      setDistrictSearchText('');
+                                    }}
+                                    className={`w-full flex items-center justify-between text-left p-2.5 rounded-lg text-xs transition-colors border ${
+                                      isSelected
+                                        ? 'bg-blue-50/65 text-blue-600 border-blue-200 font-bold shadow-sm'
+                                        : 'hover:bg-slate-50 text-slate-700 border-transparent font-semibold'
+                                    }`}
+                                  >
+                                    <div className="flex items-center gap-2.5 w-full">
+                                      {isSelected && <Check className="w-3.5 h-3.5 text-blue-600 shrink-0" />}
+                                      <span className="truncate">{d}</span>
+                                    </div>
+                                  </button>
+                                );
+                              })
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
 
               {editingSupervisor && (
                 <div>

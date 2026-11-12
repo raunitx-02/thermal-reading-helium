@@ -15,6 +15,6 @@ router.get('/:id', authMiddleware(['super_admin', 'branch_admin', 'supervisor'])
 router.post('/', authMiddleware(['super_admin', 'branch_admin', 'supervisor']), auditMiddleware('CREATE_USER', 'user'), usersController.create);
 router.put('/:id', authMiddleware(['super_admin', 'branch_admin', 'supervisor']), auditMiddleware('UPDATE_USER', 'user'), usersController.update);
 router.put('/:id/toggle-active', authMiddleware(['super_admin', 'branch_admin', 'supervisor']), auditMiddleware('TOGGLE_USER_ACTIVE', 'user'), usersController.toggleActive);
-router.delete('/:id', authMiddleware(['super_admin', 'branch_admin', 'supervisor']), auditMiddleware('DEACTIVATE_USER', 'user'), usersController.deactivate);
+router.delete('/:id', authMiddleware(['super_admin', 'branch_admin', 'supervisor']), auditMiddleware('DELETE_USER', 'user'), usersController.deleteUser);
 
 module.exports = router;

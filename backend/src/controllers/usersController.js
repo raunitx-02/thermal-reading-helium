@@ -84,12 +84,30 @@ exports.update = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
-exports.deactivate = async (req, res, next) => {
+exports.deleteUser = async (req, res, next) => {
   try {
     const db = getDb();
-    await db.prepare('UPDATE users SET is_active = 0 WHERE id = ?').run(req.params.id);
-    await db.prepare('DELETE FROM refresh_tokens WHERE user_id = ?').run(req.params.id);
-    res.json({ success: true, message: 'User deactivated' });
+    const { id } = req.params;
+    
+    // Clean up referenced/referencing records
+    await db.prepare('DELETE FROM notifications WHERE user_id = ?').run(id);
+    await db.prepare('DELETE FROM refresh_tokens WHERE user_id = ?').run(id);
+    await db.prepare('DELETE FROM assignments WHERE ground_engineer_id = ? OR supervisor_id = ?').run(id, id);
+    await db.prepare('DELETE FROM kpi_targets WHERE inspector_id = ?').run(id);
+    await db.prepare('DELETE FROM kpi_records WHERE inspector_id = ?').run(id);
+    await db.prepare('UPDATE alerts SET acknowledged_by = NULL WHERE acknowledged_by = ?').run(id);
+    await db.prepare('UPDATE trains SET created_by = NULL WHERE created_by = ?').run(id);
+    
+    const sessions = await db.prepare('SELECT id FROM inspection_sessions WHERE inspector_id = ?').all(id);
+    for (const sess of sessions) {
+      await db.prepare('DELETE FROM thermal_readings WHERE session_id = ?').run(sess.id);
+      await db.prepare('DELETE FROM alerts WHERE session_id = ?').run(sess.id);
+    }
+    await db.prepare('DELETE FROM inspection_sessions WHERE inspector_id = ?').run(id);
+    await db.prepare('UPDATE users SET parent_id = NULL WHERE parent_id = ?').run(id);
+    
+    await db.prepare('DELETE FROM users WHERE id = ?').run(id);
+    res.json({ success: true, message: 'User deleted completely from database' });
   } catch (err) { next(err); }
 };
 
